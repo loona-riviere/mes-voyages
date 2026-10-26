@@ -1,0 +1,393 @@
+<title>Cap sur…</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: panneau de critères en haut (ou à gauche sur grand écran), classement de destinations façon cartes d'embarquement */
+:root{
+  --bg:#EEF2F1; --surface:#FFFFFF; --ink:#12242B; --muted:#5B6E73; --line:#D3DDDC;
+  --accent:#0C6B6B; --accent-soft:#D6EBE8; --sun:#E9A42B; --sun-soft:#FBEBCB;
+  --m0:#E3E8E7; --m1:#A9D3CC; --m2:#0C6B6B;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Figtree", system-ui, -apple-system, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1A1E; --surface:#16252A; --ink:#E6EEEC; --muted:#93A6A8; --line:#27393E;
+  --accent:#4FC2B5; --accent-soft:#173B3A; --sun:#F2B74C; --sun-soft:#3A2F17;
+  --m0:#223338; --m1:#2D6B66; --m2:#4FC2B5; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1A1E; --surface:#16252A; --ink:#E6EEEC; --muted:#93A6A8; --line:#27393E;
+  --accent:#4FC2B5; --accent-soft:#173B3A; --sun:#F2B74C; --sun-soft:#3A2F17;
+  --m0:#223338; --m1:#2D6B66; --m2:#4FC2B5; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:24px}
+header h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,7vw,46px);line-height:1;margin:0;letter-spacing:-.02em;text-wrap:balance}
+header h1 span{color:var(--accent)}
+header p{margin:8px 0 0;color:var(--muted);max-width:60ch}
+.layout{display:grid;gap:24px;grid-template-columns:1fr}
+@media (min-width:900px){.layout{grid-template-columns:340px 1fr;align-items:start}.panel{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:18px}
+.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;font-weight:600;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline}
+.lbl b{font-family:var(--mono);font-size:13px;color:var(--ink);letter-spacing:0;text-transform:none}
+.presets{display:flex;gap:8px;flex-wrap:wrap}
+.preset{font:inherit;font-size:13px;border:1px dashed var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:5px 11px;cursor:pointer}
+.preset:hover{border-color:var(--accent);color:var(--accent)}
+.months{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
+.months button{font:500 12px var(--mono);padding:8px 0;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:6px;cursor:pointer}
+.months button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.money{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--bg)}
+.money input{border:0;background:transparent;color:var(--ink);font:500 18px var(--mono);width:100%;outline:none}
+.money span{color:var(--muted);font-size:13px;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;font-size:13.5px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.chip.neg[aria-pressed="true"]{background:var(--sun-soft);border-color:var(--sun);color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
+.results{display:grid;gap:14px;min-width:0}
+.summary{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;color:var(--muted);font-size:14px}
+.summary strong{font-family:var(--display);font-size:20px;color:var(--ink);font-weight:700}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;display:grid;grid-template-columns:1fr auto;overflow:hidden}
+.card .main{padding:16px 18px;display:grid;gap:10px;min-width:0}
+.card .stub{border-left:2px dashed var(--line);padding:16px 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:86px;position:relative}
+.card .stub::before,.card .stub::after{content:"";position:absolute;left:-9px;width:16px;height:16px;border-radius:50%;background:var(--bg)}
+.card .stub::before{top:-9px}.card .stub::after{bottom:-9px}
+.score{font:800 30px/1 var(--display);color:var(--accent)}
+.score-l{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.card.top .score{color:var(--sun)}
+.head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.rank{font:500 12px var(--mono);color:var(--muted)}
+.name{font:700 21px/1.15 var(--display);margin:0}
+.country{color:var(--muted);font-size:14px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13.5px;color:var(--muted)}
+.meta .code{font:500 12.5px var(--mono);color:var(--ink);background:var(--bg);border-radius:5px;padding:1px 6px}
+.meta b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.over{color:#B0412E}
+:root[data-theme="dark"] .over{color:#F08A74}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .over{color:#F08A74}}
+.strip{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;max-width:330px}
+.strip i{display:block;height:8px;border-radius:2px;background:var(--m0)}
+.strip i.s1{background:var(--m1)}.strip i.s2{background:var(--m2)}
+.strip i.sel{outline:2px solid var(--sun);outline-offset:1px}
+.striplbl{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;max-width:330px;font:500 9.5px var(--mono);color:var(--muted);text-align:center;margin-top:3px}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.tag.hit{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:600}
+.why{font-size:14px;margin:0;max-width:65ch}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:24px;color:var(--muted)}
+.badge{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--sun-soft);color:var(--ink);border:1px solid var(--sun)}
+.badge.done{background:var(--bg);border-color:var(--line);color:var(--muted)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer}
+.btn:disabled{opacity:.55;cursor:default}
+.btn-note{font-size:12.5px;color:var(--muted)}
+.notion{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:10px}
+.notion h3{margin:0;font:700 15px var(--display)}
+.notion .row{display:flex;flex-wrap:wrap;gap:6px}
+.trip{font-size:12.5px;padding:3px 9px;border-radius:999px;background:var(--bg);border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.trip b{font-weight:600}
+.status{font-size:13px;color:var(--muted);margin:0}
+.note{font-size:12.5px;color:var(--muted);max-width:70ch}
+@media (max-width:440px){.card{grid-template-columns:1fr}.card .stub{border-left:0;border-top:2px dashed var(--line);flex-direction:row;gap:8px;justify-content:flex-start;padding:10px 18px}.card .stub::before,.card .stub::after{display:none}.score{font-size:24px}}
+@media (prefers-reduced-motion:no-preference){.card{animation:in .25s ease both}@keyframes in{from{transform:translateY(4px)}to{transform:none}}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Cap sur<span>…</span></h1>
+    <p>Choisis la période, la durée, le budget et vos envies : les destinations se classent toutes seules.</p>
+  </header>
+
+  <div class="layout">
+    <section class="panel" aria-label="Critères">
+      <div>
+        <div class="lbl">Exemples de départ</div>
+        <div class="presets" id="presets"></div>
+      </div>
+      <div>
+        <div class="lbl">Mois du départ <b id="monthOut"></b></div>
+        <div class="months" id="months"></div>
+      </div>
+      <div>
+        <div class="lbl">Durée <b id="daysOut"></b></div>
+        <input type="range" id="days" min="2" max="21" step="1" value="15" aria-label="Durée en jours">
+      </div>
+      <div>
+        <div class="lbl">Budget par personne <b>vols + sur place</b></div>
+        <div class="money"><input id="budget" type="number" inputmode="numeric" min="200" step="100" value="5000" aria-label="Budget par personne en euros"><span>€ / pers.</span></div>
+      </div>
+      <div>
+        <div class="lbl">Envies</div>
+        <div class="chips" id="wants"></div>
+      </div>
+      <div>
+        <div class="lbl">Contraintes</div>
+        <div class="chips" id="rules"></div>
+      </div>
+    </section>
+
+    <section class="results" aria-live="polite">
+      <div class="notion" id="notion"><h3>Depuis Notion</h3><p class="status" id="nstatus">Connexion à ton Planificateur de Voyage…</p><div class="row" id="trips"></div></div>
+      <div class="summary" id="summary"></div>
+      <div id="list" class="results"></div>
+      <p class="note">Coûts et temps de vol estimés depuis Paris, à titre indicatif : vols A/R en éco, plus un budget journalier moyen sur place (logement, repas, activités). Les vols directs peuvent être saisonniers.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+const MONTHS=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+const ML="JFMAMJJASOND";
+const WANTS=[["plage","Plage"],["nature","Nature & paysages"],["faune","Faune sauvage"],["rando","Randonnée"],["plongee","Plongée"],["culture","Culture & histoire"],["ville","Ville"],["gastro","Gastronomie"],["desert","Désert"],["neige","Neige"]];
+const RULES=[["noBeach","Pas de plage"],["direct","Vol direct uniquement"],["calm","Peu de monde"],["kids","Avec enfants"]];
+const TAG=Object.fromEntries(WANTS);
+// [nom, pays, code, heures de vol, direct, vol A/R €, €/jour/pers, tags (1er = point fort), saison J→D (0 bof,1 ok,2 idéal), affluence 0-2, phrase]
+const D=[
+["Marrakech","Maroc","RAK",3.3,1,180,95,["culture","ville","gastro","desert"],[1,2,2,2,2,1,0,0,1,2,2,1],2,"Riads, souks et désert d'Agafay à une heure de route."],
+["Lisbonne","Portugal","LIS",2.7,1,160,110,["ville","culture","gastro","plage"],[0,1,1,2,2,2,1,1,2,2,1,0],2,"Ville lumineuse, cuisine simple et plages de Cascais juste à côté."],
+["Tenerife","Canaries, Espagne","TFS",4.3,1,220,100,["plage","nature","rando","plongee"],[2,2,2,2,2,1,1,1,2,2,2,2],2,"Le soleil d'hiver le plus proche, avec le Teide à gravir."],
+["Madère","Portugal","FNC",3.8,1,240,110,["nature","rando","gastro"],[1,1,2,2,2,2,2,2,2,2,1,1],1,"Levadas en falaise et forêts de lauriers, climat doux toute l'année."],
+["Açores","Portugal","PDL",3.5,1,320,105,["nature","rando","faune","plongee"],[0,0,1,2,2,2,2,2,2,1,0,0],0,"Volcans, lacs de cratère et observation des baleines."],
+["Sicile","Italie","CTA",2.7,1,170,100,["culture","gastro","plage","nature"],[0,0,1,2,2,2,1,1,2,2,1,0],2,"Etna, temples grecs et cuisine de rue."],
+["Crète","Grèce","HER",3.5,1,220,90,["plage","rando","culture","plongee"],[0,0,1,2,2,2,1,1,2,2,1,0],2,"Gorges à randonner et criques turquoise."],
+["Écosse","Royaume-Uni","EDI",1.7,1,150,140,["nature","rando","culture"],[0,0,1,1,2,2,2,2,2,1,0,0],1,"Highlands, îles et distilleries, à moins de deux heures de vol."],
+["Islande","Islande","KEF",3.3,1,320,220,["nature","rando","neige"],[1,1,1,1,1,2,2,2,1,1,0,1],1,"Glaciers, cascades et aurores boréales l'hiver."],
+["Lofoten","Norvège","BOO",4.5,0,380,190,["nature","rando","neige"],[1,1,1,0,1,2,2,2,1,0,0,1],1,"Pics plongeant dans la mer, randonnées sous le soleil de minuit."],
+["Laponie","Finlande","RVN",3.8,0,450,210,["neige","nature","faune"],[2,2,2,0,0,1,1,0,1,0,0,2],1,"Chiens de traîneau, rennes et aurores."],
+["Géorgie","Géorgie","TBS",4.8,1,320,70,["rando","gastro","culture","nature"],[0,0,1,1,2,2,2,2,2,2,1,0],0,"Caucase sauvage, vin en amphore et monastères perchés."],
+["Jordanie","Jordanie","AMM",4.8,1,400,130,["desert","culture","rando","plongee"],[0,1,2,2,2,1,0,0,1,2,2,1],1,"Pétra, Wadi Rum et la mer Rouge à Aqaba."],
+["Égypte","Égypte","HRG",4.8,1,380,80,["culture","plongee","desert","plage"],[2,2,2,2,1,0,0,0,1,2,2,2],2,"Temples du Nil et récifs parmi les plus beaux de la mer Rouge."],
+["Oman","Oman","MCT",8.5,0,650,160,["desert","nature","plongee","plage"],[2,2,2,1,0,0,0,0,1,2,2,2],0,"Fjords de Musandam, wadis et dunes de Wahiba."],
+["Ouzbékistan","Ouzbékistan","TAS",6.5,1,560,70,["culture","ville","gastro"],[0,0,1,2,2,1,0,0,1,2,1,0],0,"Samarcande et Boukhara, la route de la soie en mosaïques bleues."],
+["Sénégal","Sénégal","DSS",5.5,1,480,85,["culture","plage","nature","faune"],[2,2,2,2,1,0,0,0,0,1,2,2],0,"Sine Saloum, île de Gorée et lumière douce de l'hiver."],
+["Cap-Vert","Cap-Vert","SID",6,1,450,90,["plage","rando","nature"],[2,2,2,2,2,1,1,1,1,2,2,2],1,"Randonnées volcaniques à Santo Antão et plages de Sal."],
+["Kenya","Kenya","NBO",8.5,1,800,280,["faune","nature"],[2,2,1,0,0,1,2,2,2,2,1,2],1,"Masai Mara et la grande migration de juillet à octobre."],
+["Tanzanie","Tanzanie","JRO",11,0,900,300,["faune","nature","plage"],[2,2,1,0,0,2,2,2,2,2,1,2],1,"Serengeti, cratère du Ngorongoro et Kilimandjaro."],
+["Namibie","Namibie","WDH",13,0,950,200,["faune","desert","nature"],[1,1,1,2,2,2,2,2,2,2,1,1],0,"Dunes de Sossusvlei, Etosha et grands espaces vides : road trip en autonomie."],
+["Botswana","Botswana","MUB",14,0,1150,450,["faune","nature"],[0,0,0,1,1,2,2,2,2,2,1,0],0,"Delta de l'Okavango en mokoro, safari très peu fréquenté."],
+["Afrique du Sud","Afrique du Sud","CPT",11.5,1,900,160,["faune","nature","gastro","rando"],[2,2,2,2,1,1,1,1,2,2,2,2],1,"Le Cap, les vignobles et un safari dans le Kruger."],
+["Madagascar","Madagascar","TNR",11,1,950,110,["nature","faune","plongee","plage"],[0,0,1,2,2,2,2,2,2,2,2,1],0,"Lémuriens, baobabs et tsingy, une faune qu'on ne voit nulle part ailleurs."],
+["La Réunion","France","RUN",11,1,850,130,["rando","nature","plongee"],[1,0,1,2,2,2,2,2,2,2,2,1],1,"Cirques, Piton de la Fournaise et lagon."],
+["Guadeloupe","France","PTP",8.5,1,600,130,["plage","plongee","nature"],[2,2,2,2,1,1,1,0,0,1,1,2],1,"Réserve Cousteau, Soufrière et plages de Grande-Terre."],
+["Costa Rica","Costa Rica","SJO",11,1,800,140,["nature","faune","rando","plage"],[2,2,2,2,1,0,1,1,0,0,1,2],1,"Forêts de nuages, volcans et paresseux."],
+["Yucatán","Mexique","CUN",11,1,750,120,["plage","culture","plongee"],[2,2,2,2,1,0,0,0,0,1,2,2],2,"Cénotes, cités mayas et mer des Caraïbes."],
+["Pérou","Pérou","LIM",12,1,950,110,["culture","rando","nature"],[1,1,1,2,2,2,2,2,2,2,1,1],1,"Machu Picchu, Vallée sacrée et lac Titicaca."],
+["Patagonie","Argentine & Chili","FTE",17,0,1200,160,["nature","rando","faune"],[2,2,2,1,0,0,0,0,0,1,2,2],0,"Fitz Roy, glacier Perito Moreno et Torres del Paine."],
+["Japon","Japon","HND",14,1,950,170,["culture","ville","gastro","nature"],[1,1,2,2,2,0,0,0,1,2,2,1],2,"Kyoto, Alpes japonaises et onsen, idéal au printemps et à l'automne."],
+["Vietnam","Vietnam","HAN",12,1,750,70,["culture","gastro","nature","plage"],[1,2,2,2,1,1,1,1,1,2,2,1],2,"Baie d'Halong, rizières du Nord et cuisine de rue."],
+["Sri Lanka","Sri Lanka","CMB",13,0,700,80,["culture","nature","faune","plage"],[2,2,2,1,1,1,1,1,1,1,1,2],1,"Temples, plantations de thé et éléphants de Minneriya."],
+["Thaïlande","Thaïlande","BKK",11.5,1,700,80,["plage","culture","gastro","plongee"],[2,2,2,1,1,0,0,0,0,1,2,2],2,"Îles d'Andaman, temples de Chiang Mai et street food."],
+["Indonésie","Bali & Komodo","DPS",17,0,950,90,["plongee","plage","nature","culture"],[1,1,1,2,2,2,2,2,2,2,1,1],2,"Rizières de Bali et plongée avec les raies manta à Komodo."]
+];
+
+const PRESETS=[
+  {name:"Safari 2027",m:8,d:15,b:5000,w:["faune","nature"],r:["noBeach","calm"]},
+  {name:"Les 30 ans en janvier",m:0,d:5,b:900,w:["culture","gastro"],r:["direct"]},
+  {name:"Jordanie en mai",m:4,d:8,b:2000,w:["culture","desert","rando"],r:[]},
+];
+const KEY="capsur-v1";
+let st={m:8,d:15,b:5000,w:new Set(["faune","nature"]),r:new Set(["noBeach","calm"])};
+try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s){st={m:s.m,d:s.d,b:s.b,w:new Set(s.w),r:new Set(s.r)}}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({m:st.m,d:st.d,b:st.b,w:[...st.w],r:[...st.r]}))}catch(e){}}
+
+const $=id=>document.getElementById(id);
+const eur=n=>Math.round(n/50)*50;
+const fmt=n=>n.toLocaleString("fr-FR")+" €";
+const hrs=h=>{const H=Math.floor(h),M=Math.round((h-H)*60);return H+"h"+(M?String(M).padStart(2,"0"):"")};
+
+function build(){
+  $("presets").innerHTML=PRESETS.map((p,i)=>`<button class="preset" data-i="${i}">${p.name}</button>`).join("");
+  $("months").innerHTML=MONTHS.map((m,i)=>`<button id="m${i}" data-m="${i}" aria-label="${m}">${ML[i]}</button>`).join("");
+  $("wants").innerHTML=WANTS.map(([k,l])=>`<button class="chip" id="w-${k}" data-w="${k}">${l}</button>`).join("");
+  $("rules").innerHTML=RULES.map(([k,l])=>`<button class="chip neg" id="r-${k}" data-r="${k}">${l}</button>`).join("");
+  $("presets").onclick=e=>{const b=e.target.closest("[data-i]");if(!b)return;const p=PRESETS[b.dataset.i];st={m:p.m,d:p.d,b:p.b,w:new Set(p.w),r:new Set(p.r)};sync()};
+  $("months").onclick=e=>{const b=e.target.closest("[data-m]");if(!b)return;st.m=+b.dataset.m;sync()};
+  $("wants").onclick=e=>{const b=e.target.closest("[data-w]");if(!b)return;const k=b.dataset.w;st.w.has(k)?st.w.delete(k):st.w.add(k);sync()};
+  $("rules").onclick=e=>{const b=e.target.closest("[data-r]");if(!b)return;const k=b.dataset.r;st.r.has(k)?st.r.delete(k):st.r.add(k);sync()};
+  $("days").oninput=e=>{st.d=+e.target.value;sync()};
+  $("budget").oninput=e=>{st.b=Math.max(0,+e.target.value||0);sync(true)};
+}
+
+// ---- Notion ----
+const DS_PAST="collection://8195c0cd-68d2-408e-afce-409b3f113982";
+const DS_WISH="collection://f84d6097-98c1-4b04-8fa9-bb7bcd36b7a4";
+const DS_WISH_ID="f84d6097-98c1-4b04-8fa9-bb7bcd36b7a4";
+const NOTION="Notion", QTOOL="notion-query-data-sources", CTOOL="notion-create-pages";
+const LABEL2KEY=Object.fromEntries(WANTS.map(([k,l])=>[l,k]));
+const PRIO={"Très envie":10,"Envie":6,"Un jour":3};
+let N={past:[],wishes:[],state:"loading"};
+let mcp=null;
+const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+const arr=v=>{if(Array.isArray(v))return v;try{const a=JSON.parse(v||"[]");return Array.isArray(a)?a:[]}catch(e){return []}};
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function matchCatalog(name){const t=norm(name);return D.find(x=>t.includes(norm(x[0]).replace(/^la /,"")))}
+function pastFor(x){const hay=norm(x[0]+" "+x[1]);return N.past.find(p=>{const n=norm(p.Nom);return n&&(hay.includes(n)||n.includes(norm(x[0])))})}
+const wishOk=w=>!(st.r.has("kids")&&w.Enfants==="Sans enfants");
+function wishFor(x){return N.wishes.find(w=>w._cat===x&&wishOk(w))}
+
+async function readRows(ds,refresh){
+  const r=await mcp.callTool(NOTION,QTOOL,{data:{mode:"rows",data_source_url:ds,limit:100}},{cache:refresh?{refresh:true,staleTime:60000,gcTime:600000}:{staleTime:60000,gcTime:600000}});
+  const p=r.payload;return (p&&Array.isArray(p.results))?p.results:[];
+}
+const ERR={
+  needs_reauth:"La connexion Notion a expiré. Reconnecte Notion dans claude.ai, Paramètres → Connecteurs.",
+  server_not_connected:"Notion n'est pas connecté pour toi. Ajoute-le dans claude.ai, Paramètres → Connecteurs.",
+  selection_required:"Choisis quel connecteur Notion utiliser dans la fenêtre proposée par claude.ai.",
+  not_in_manifest:"L'accès à Notion a été refusé pour cette page. Tu peux le réactiver depuis le menu Autorisations de l'artifact.",
+  approval_required:"Il faut autoriser l'accès à Notion pour charger tes voyages.",
+  blocked_by_policy:"Ton organisation bloque cet accès Notion.",
+  server_unavailable:"Notion ne répond pas pour l'instant. Réessaie dans un moment."
+};
+async function loadNotion(refresh){
+  if(!mcp){N.state="off";renderNotion();return}
+  N.state="loading";renderNotion();
+  try{
+    const [past,wishes]=await Promise.all([readRows(DS_PAST,refresh),readRows(DS_WISH,refresh)]);
+    N.past=past.filter(r=>r.Statut==="Visité").sort((a,b)=>String(b["date:Date:start"]).localeCompare(String(a["date:Date:start"])));
+    N.wishes=wishes.map(w=>({...w,_cat:matchCatalog(w.Nom||"")}));
+    N.state="ok";
+  }catch(e){N.state="error";N.err=e&&e.code;}
+  renderNotion();render();
+}
+function days(a,b){if(!a||!b)return null;return Math.round((new Date(b)-new Date(a))/864e5)+1}
+function renderNotion(){
+  const st_=$("nstatus"),tr=$("trips");
+  if(N.state==="off"){st_.textContent="Notion n'est pas accessible depuis cet affichage : les idées viennent du catalogue intégré.";tr.innerHTML="";return}
+  if(N.state==="loading"){st_.textContent="Chargement de ton Planificateur de Voyage…";return}
+  if(N.state==="error"){st_.innerHTML=esc(ERR[N.err]||"Impossible de lire Notion pour l'instant.")+(N.err==="approval_required"||N.err==="server_unavailable"||!ERR[N.err]?' <button class="btn" id="retry">Réessayer</button>':"");tr.innerHTML="";const b=$("retry");if(b)b.onclick=()=>loadNotion(true);return}
+  st_.innerHTML=`${N.wishes.length} envie${N.wishes.length>1?"s":""} sur ta liste, ${N.past.length} voyages déjà faits (marqués et un peu reculés dans le classement). <button class="btn" id="reload">Actualiser</button>`;
+  $("reload").onclick=()=>loadNotion(true);
+  tr.innerHTML=N.past.map(p=>{const y=String(p["date:Date:start"]||"").slice(0,4);const d=days(p["date:Date:start"],p["date:Date:end"]);return `<span class="trip"><b>${esc(p.Nom)}</b> ${y}${d?` · ${d} j`:""}</span>`}).join("");
+}
+
+// ---- Classement ----
+function scoreCore({season,tags,cost,minDays,crowd,beachFirst}){
+  const wants=[...st.w];const hits=wants.filter(w=>tags.includes(w));
+  let pts=0;
+  pts+=season===2?32:season===1?18:0;
+  pts+=wants.length?33*hits.length/wants.length:33;
+  let over=0;
+  if(cost==null)pts+=12;else{over=cost>st.b?(cost-st.b)/Math.max(st.b,1):0;pts+=Math.max(0,20*(1-over*2))}
+  pts+=minDays==null?7:st.d>=minDays?10:Math.max(0,10-(minDays-st.d)*3);
+  pts+=st.r.has("calm")?(crowd==null?3:[5,2,0][crowd]):5;
+  if(st.r.has("noBeach")&&beachFirst)pts-=20;
+  if(wants.length&&!hits.length)pts-=10;
+  return {pts,hits,over};
+}
+function score(x){
+  const [name,country,code,h,direct,fly,day,tags,season,crowd]=x;
+  const travel=direct?h:h+3;
+  const cost=fly+day*st.d;
+  const minDays=travel<4?3:travel<7?6:travel<11?9:12;
+  const c=scoreCore({season:season[st.m],tags,cost,minDays,crowd,beachFirst:tags[0]==="plage"});
+  const wish=wishFor(x),past=pastFor(x);
+  if(wish)c.pts+=PRIO[wish["Priorité"]]||5;
+  if(past)c.pts-=15;
+  return {kind:"cat",x,s:season[st.m],cost,minDays,wish,past,...c,pts:Math.max(0,Math.min(100,Math.round(c.pts)))};
+}
+function scoreWish(w){
+  const months=arr(w["Meilleurs mois"]).map(m=>MONTHS.indexOf(m)).filter(i=>i>=0);
+  const tags=arr(w.Envies).map(l=>LABEL2KEY[l]).filter(Boolean);
+  const season=months.length?(months.includes(st.m)?2:0):1;
+  const b=w["Budget estimé / pers"];
+  const ideal=w["Durée idéale (jours)"];
+  const c=scoreCore({season,tags,cost:typeof b==="number"?b:null,minDays:typeof ideal==="number"?Math.max(2,ideal-3):null,crowd:null,beachFirst:false});
+  c.pts+=PRIO[w["Priorité"]]||5;
+  return {kind:"wish",w,tags,months,s:season,cost:typeof b==="number"?b:null,ideal,...c,pts:Math.max(0,Math.min(100,Math.round(c.pts)))};
+}
+
+function why(r){
+  const out=[],mo=MONTHS[st.m].toLowerCase();
+  if(r.kind==="wish"&&!r.months.length)out.push("pas de période indiquée dans Notion");
+  else out.push(r.s===2?`très bonne saison en ${mo}`:r.s===1?`saison correcte en ${mo}`:`mauvaise saison en ${mo}`);
+  if(r.over>0)out.push(`dépasse le budget d'environ ${fmt(eur(r.cost-st.b))}`);
+  if(r.kind==="cat"&&st.d<r.minDays)out.push(`un peu loin pour ${st.d} jours (${r.minDays} conseillés)`);
+  if(r.kind==="wish"&&r.ideal&&Math.abs(r.ideal-st.d)>=4)out.push(`durée idéale notée : ${r.ideal} jours`);
+  return out.join(", ").replace(/^./,c=>c.toUpperCase())+".";
+}
+
+function render(){
+  let res=D.filter(x=>!(st.r.has("direct")&&!x[4])).map(score);
+  const hidden=D.length-res.length;
+  const extra=N.wishes.filter(w=>!w._cat&&wishOk(w)).map(scoreWish);
+  res=res.concat(extra).sort((a,b)=>b.pts-a.pts);
+  const shown=res.slice(0,8);
+  $("summary").innerHTML=`<strong>${shown.length} idées</strong><span>${MONTHS[st.m].toLowerCase()} · ${st.d} jours · ${fmt(st.b)} / pers.</span>${hidden?`<span>${hidden} écartées (pas de vol direct)</span>`:""}`;
+  if(!shown.length){$("list").innerHTML=`<div class="empty">Aucune destination ne passe ces contraintes. Essaie d'autoriser les vols avec escale.</div>`;return}
+  $("list").innerHTML=shown.map((r,i)=>r.kind==="wish"?wishCard(r,i):catCard(r,i)).join("");
+}
+function stripHTML(season){return `<div><div class="strip" aria-label="Saisonnalité">${season.map((v,j)=>`<i class="s${v}${j===st.m?" sel":""}" title="${MONTHS[j]}"></i>`).join("")}</div><div class="striplbl" aria-hidden="true">${[...ML].map(c=>`<span>${c}</span>`).join("")}</div></div>`}
+function catCard(r,i){
+  const [name,country,code,h,direct,fly,day,tags,season,crowd,line]=r.x;
+  const y=r.past?String(r.past["date:Date:start"]||"").slice(0,4):"";
+  const canAdd=N.state==="ok"&&!r.wish;
+  return `<article class="card${i===0?" top":""}">
+    <div class="main">
+      <div class="head"><span class="rank">${String(i+1).padStart(2,"0")}</span><h2 class="name">${name}</h2><span class="country">${country}</span>${r.wish?`<span class="badge">Sur ta liste${r.wish.Enfants?" · "+esc(r.wish.Enfants):""}</span>`:""}${r.past?`<span class="badge done">Déjà fait${y?" en "+y:""}</span>`:""}</div>
+      <div class="meta">
+        <span><span class="code">CDG → ${code}</span> ${hrs(h)} ${direct?"sans escale":"avec escale"}</span>
+        <span>≈ <b class="${r.over>0?"over":""}">${fmt(eur(r.cost))}</b> / pers.</span>
+        <span>${["Peu fréquenté","Affluence moyenne","Très fréquenté"][crowd]}</span>
+      </div>
+      ${stripHTML(season)}
+      <p class="why">${line} <span style="color:var(--muted)">${why(r)}</span></p>
+      ${r.wish&&r.wish.Notes?`<p class="why" style="color:var(--muted)">Ta note : ${esc(r.wish.Notes)}</p>`:""}
+      <div class="tags">${tags.map(t=>`<span class="tag${r.hits.includes(t)?" hit":""}">${TAG[t]}</span>`).join("")}</div>
+      ${canAdd?`<div class="actions"><button class="btn" id="add-${code}" data-add="${code}">Ajouter à mes envies</button><span class="btn-note" id="addmsg-${code}"></span></div>`:""}
+    </div>
+    <div class="stub"><span class="score">${r.pts}</span><span class="score-l">sur 100</span></div>
+  </article>`;
+}
+function wishCard(r,i){
+  const w=r.w;const season=MONTHS.map((_,j)=>r.months.length?(r.months.includes(j)?2:0):1);
+  return `<article class="card${i===0?" top":""}">
+    <div class="main">
+      <div class="head"><span class="rank">${String(i+1).padStart(2,"0")}</span><h2 class="name">${esc(w.Nom)}</h2><span class="country">${esc(w.Pays||"")}</span><span class="badge">Sur ta liste${w["Priorité"]?" · "+esc(w["Priorité"]):""}</span></div>
+      <div class="meta">
+        ${r.cost!=null?`<span>≈ <b class="${r.over>0?"over":""}">${fmt(eur(r.cost))}</b> / pers. (ton estimation)</span>`:`<span>Budget pas encore estimé</span>`}
+        ${r.ideal?`<span>Idéal : <b>${r.ideal} jours</b></span>`:""}
+        ${w.Enfants?`<span>${esc(w.Enfants)}</span>`:w["Avec qui"]?`<span>Avec ${esc(w["Avec qui"])}</span>`:""}
+      </div>
+      ${stripHTML(season)}
+      <p class="why">${w.Notes?esc(w.Notes)+" ":""}<span style="color:var(--muted)">${why(r)}</span></p>
+      <div class="tags">${r.tags.map(t=>`<span class="tag${r.hits.includes(t)?" hit":""}">${TAG[t]}</span>`).join("")}</div>
+      ${w.url?`<div class="actions"><a class="btn" style="text-decoration:none" href="${esc(w.url)}" target="_blank" rel="noopener">Ouvrir dans Notion</a></div>`:""}
+    </div>
+    <div class="stub"><span class="score">${r.pts}</span><span class="score-l">sur 100</span></div>
+  </article>`;
+}
+
+async function addWish(code,btn){
+  const x=D.find(d=>d[2]===code);if(!x||!mcp)return;
+  const msg=$("addmsg-"+code);btn.disabled=true;msg.textContent="Ajout…";
+  const props={"Nom":x[0],"Pays":x[1],"Envies":JSON.stringify(x[7].map(k=>TAG[k])),"Meilleurs mois":JSON.stringify(x[8].map((v,j)=>v===2?MONTHS[j]:null).filter(Boolean)),"Durée idéale (jours)":st.d,"Budget estimé / pers":eur(x[5]+x[6]*st.d),"Priorité":"Envie","Statut":"Idée","Notes":x[10]};
+  try{
+    await mcp.callTool(NOTION,CTOOL,{parent:{type:"data_source_id",data_source_id:DS_WISH_ID},pages:[{properties:props}]},{cache:false});
+    msg.textContent="Ajouté à Envies de voyage.";
+    try{await mcp.invalidate(NOTION,QTOOL)}catch(e){}
+    loadNotion(true);
+  }catch(e){
+    btn.disabled=false;
+    const c=e&&e.code;
+    msg.textContent=c==="approval_required"?"Il faut autoriser l'écriture dans Notion pour ajouter cette envie.":(c==="server_unavailable"||c==="upstream_error"||c==="tool_error")?"L'ajout a peut-être échoué : vérifie dans Notion avant de réessayer.":(ERR[c]||"Impossible d'ajouter cette envie pour l'instant.");
+  }
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-add]");if(b)addWish(b.dataset.add,b)});
+
+function sync(fromBudget){
+  $("monthOut").textContent=MONTHS[st.m];
+  $("daysOut").textContent=st.d+" jours";
+  $("days").value=st.d;
+  if(!fromBudget)$("budget").value=st.b;
+  MONTHS.forEach((_,i)=>$("m"+i).setAttribute("aria-pressed",i===st.m));
+  WANTS.forEach(([k])=>$("w-"+k).setAttribute("aria-pressed",st.w.has(k)));
+  RULES.forEach(([k])=>$("r-"+k).setAttribute("aria-pressed",st.r.has(k)));
+  save();render();
+}
+build();sync();renderNotion();
+(async()=>{try{mcp=window.claude&&window.claude.use?await window.claude.use("mcp"):null}catch(e){mcp=null}loadNotion(false)})();
+</script>
