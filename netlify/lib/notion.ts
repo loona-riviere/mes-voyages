@@ -1,0 +1,235 @@
+import { MONTHS, WANTS } from "../../src/data/catalogue";
+import {
+  PRIORITIES, WISH_STATUSES,
+  type Kids, type NewWish, type Priority, type Trip, type TripStatus, type Wish, type WishPatch, type WishStatus,
+} from "../../src/shared/types";
+
+export const NOTION_VERSION = "2026-03-11";
+export const TRIPS_DATA_SOURCE = "8195c0cd-68d2-408e-afce-409b3f113982";
+export const WISHES_DATA_SOURCE = "f84d6097-98c1-4b04-8fa9-bb7bcd36b7a4";
+
+const WANT_LABELS: readonly string[] = WANTS.map((w) => w.label);
+const WITH_WHOM = ["Julien", "Copains", "Famille", "Seule"];
+const KIDS: readonly Kids[] = ["Sans enfants", "Avec enfants"];
+const TRIP_STATUSES: readonly TripStatus[] = ["À visiter", "À planifier", "En cours", "Visité"];
+
+// ---------- Appels HTTP ----------
+
+export class NotionError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
+export async function notion<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+  const token = process.env.NOTION_TOKEN;
+  if (!token) throw new NotionError(500, "NOTION_TOKEN manquant");
+  const res = await fetch(`https://api.notion.com/v1${path}`, {
+    method: init.method ?? "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Notion-Version": NOTION_VERSION,
+      "Content-Type": "application/json",
+    },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+  });
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      message = ((await res.json()) as { message?: string }).message ?? message;
+    } catch {
+      // réponse sans JSON
+    }
+    throw new NotionError(res.status, message);
+  }
+  return (await res.json()) as T;
+}
+
+export interface Page {
+  id: string;
+  url: string;
+  in_trash?: boolean;
+  properties: Record<string, Prop>;
+}
+
+interface QueryResponse {
+  results: Page[];
+  has_more: boolean;
+  next_cursor: string | null;
+}
+
+/** Toutes les pages d'une data source, en suivant la pagination. */
+export async function queryAll(dataSourceId: string, sorts?: unknown[]): Promise<Page[]> {
+  const pages: Page[] = [];
+  let cursor: string | undefined;
+  do {
+    const r = await notion<QueryResponse>(`/data_sources/${dataSourceId}/query`, {
+      method: "POST",
+      body: { page_size: 100, start_cursor: cursor, sorts },
+    });
+    pages.push(...r.results.filter((p) => !p.in_trash));
+    cursor = r.has_more && r.next_cursor ? r.next_cursor : undefined;
+  } while (cursor);
+  return pages;
+}
+
+// ---------- Lecture des propriétés ----------
+
+type RichText = { plain_text: string }[];
+type Formula =
+  | { type: "number"; number: number | null }
+  | { type: "string"; string: string | null }
+  | { type: "boolean"; boolean: boolean | null }
+  | { type: "date"; date: { start: string } | null };
+export type Prop =
+  | { type: "title"; title: RichText }
+  | { type: "rich_text"; rich_text: RichText }
+  | { type: "number"; number: number | null }
+  | { type: "select"; select: { name: string } | null }
+  | { type: "status"; status: { name: string } | null }
+  | { type: "multi_select"; multi_select: { name: string }[] }
+  | { type: "date"; date: { start: string; end: string | null } | null }
+  | { type: "formula"; formula: Formula }
+  | { type: string; [k: string]: unknown };
+
+const get = (p: Page, name: string): Prop | undefined => p.properties[name];
+
+export function text(p: Page, name: string): string {
+  const v = get(p, name);
+  if (v?.type === "title") return (v.title as RichText).map((t) => t.plain_text).join("");
+  if (v?.type === "rich_text") return (v.rich_text as RichText).map((t) => t.plain_text).join("");
+  return "";
+}
+
+export function option(p: Page, name: string): string | null {
+  const v = get(p, name);
+  if (v?.type === "select") return (v.select as { name: string } | null)?.name ?? null;
+  if (v?.type === "status") return (v.status as { name: string } | null)?.name ?? null;
+  return null;
+}
+
+export function options(p: Page, name: string): string[] {
+  const v = get(p, name);
+  return v?.type === "multi_select" ? (v.multi_select as { name: string }[]).map((o) => o.name) : [];
+}
+
+/** Nombre, y compris depuis une formule numérique ou texte (« 15 jours », « 1 250 € »). */
+export function num(p: Page, name: string): number | null {
+  const v = get(p, name);
+  if (v?.type === "number") return (v.number as number | null) ?? null;
+  if (v?.type === "formula") {
+    const f = v.formula as Formula;
+    if (f.type === "number") return f.number;
+    if (f.type === "string" && f.string) {
+      const m = f.string.replace(/[\s  ]/g, "").replace(",", ".").match(/-?\d+(\.\d+)?/);
+      return m ? Number(m[0]) : null;
+    }
+  }
+  return null;
+}
+
+export function dateRange(p: Page, name: string): { start: string | null; end: string | null } {
+  const v = get(p, name);
+  const d = v?.type === "date" ? (v.date as { start: string; end: string | null } | null) : null;
+  return { start: d?.start?.slice(0, 10) ?? null, end: d?.end?.slice(0, 10) ?? null };
+}
+
+const oneOf = <T extends string>(list: readonly T[], v: string | null): T | null =>
+  v !== null && (list as readonly string[]).includes(v) ? (v as T) : null;
+
+export function toWish(p: Page): Wish {
+  return {
+    id: p.id,
+    url: p.url,
+    name: text(p, "Nom"),
+    country: text(p, "Pays"),
+    wants: options(p, "Envies"),
+    bestMonths: options(p, "Meilleurs mois")
+      .map((m) => (MONTHS as readonly string[]).indexOf(m))
+      .filter((i) => i >= 0)
+      .sort((a, b) => a - b),
+    idealDays: num(p, "Durée idéale (jours)"),
+    budget: num(p, "Budget estimé / pers"),
+    withWhom: option(p, "Avec qui"),
+    kids: oneOf(KIDS, option(p, "Enfants")),
+    priority: oneOf(PRIORITIES, option(p, "Priorité")),
+    status: oneOf(WISH_STATUSES, option(p, "Statut")),
+    notes: text(p, "Notes"),
+  };
+}
+
+export function daysBetween(start: string | null, end: string | null): number | null {
+  if (!start || !end) return null;
+  return Math.round((Date.parse(end) - Date.parse(start)) / 864e5) + 1;
+}
+
+export function toTrip(p: Page): Trip {
+  const { start, end } = dateRange(p, "Date");
+  return {
+    id: p.id,
+    url: p.url,
+    name: text(p, "Nom"),
+    status: oneOf(TRIP_STATUSES, option(p, "Statut")),
+    start,
+    end,
+    budget: num(p, "Budget"),
+    days: num(p, "Durée") ?? daysBetween(start, end),
+    pricePerPerson: num(p, "Prix par personne"),
+    dailyPerPerson: num(p, "Budget / jour / pers"),
+  };
+}
+
+// ---------- Écriture ----------
+
+const rich = (s: string) => [{ type: "text", text: { content: s.slice(0, 2000) } }];
+const sel = (name: string | null | undefined) => ({ select: name ? { name } : null });
+
+export class InvalidInput extends Error {}
+
+function check<T extends string>(list: readonly T[], v: unknown, field: string): T {
+  if (typeof v !== "string" || !(list as readonly string[]).includes(v)) throw new InvalidInput(`${field} invalide`);
+  return v as T;
+}
+
+function positive(v: unknown, field: string): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v !== "number" || !Number.isFinite(v) || v < 0) throw new InvalidInput(`${field} invalide`);
+  return Math.round(v);
+}
+
+/** Propriétés Notion d'une nouvelle envie. Refuse les valeurs hors des options existantes. */
+export function newWishProperties(input: NewWish): Record<string, unknown> {
+  const name = typeof input.name === "string" ? input.name.trim() : "";
+  if (!name) throw new InvalidInput("Nom manquant");
+  const props: Record<string, unknown> = {
+    "Nom": { title: rich(name) },
+    "Priorité": sel(check(PRIORITIES, input.priority ?? "Envie", "Priorité")),
+    "Statut": sel(check(WISH_STATUSES, input.status ?? "Idée", "Statut")),
+  };
+  if (input.country) props["Pays"] = { rich_text: rich(String(input.country)) };
+  if (input.notes) props["Notes"] = { rich_text: rich(String(input.notes)) };
+  if (input.wants?.length) props["Envies"] = { multi_select: input.wants.map((w) => ({ name: check(WANT_LABELS, w, "Envies") })) };
+  if (input.bestMonths?.length) {
+    props["Meilleurs mois"] = {
+      multi_select: input.bestMonths.map((i) => {
+        if (!Number.isInteger(i) || i < 0 || i > 11) throw new InvalidInput("Mois invalide");
+        return { name: MONTHS[i] };
+      }),
+    };
+  }
+  const days = positive(input.idealDays, "Durée");
+  if (days !== null) props["Durée idéale (jours)"] = { number: days };
+  const budget = positive(input.budget, "Budget");
+  if (budget !== null) props["Budget estimé / pers"] = { number: budget };
+  if (input.withWhom) props["Avec qui"] = sel(check(WITH_WHOM, input.withWhom, "Avec qui"));
+  if (input.kids) props["Enfants"] = sel(check(KIDS, input.kids, "Enfants"));
+  return props;
+}
+
+export function patchProperties(patch: WishPatch): Record<string, unknown> {
+  const props: Record<string, unknown> = {};
+  if (patch.priority !== undefined) props["Priorité"] = sel(check<Priority>(PRIORITIES, patch.priority, "Priorité"));
+  if (patch.status !== undefined) props["Statut"] = sel(check<WishStatus>(WISH_STATUSES, patch.status, "Statut"));
+  if (!Object.keys(props).length) throw new InvalidInput("Rien à modifier");
+  return props;
+}
