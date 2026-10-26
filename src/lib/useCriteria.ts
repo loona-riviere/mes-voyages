@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { MONTHS, RULES, WANTS, type Rule, type Want } from "../data/catalogue";
-import { DEFAULT_CRITERIA } from "../data/presets";
+import { DEFAULT_CRITERIA } from "./score";
 import type { Criteria } from "./score";
 
 const KEY = "mv-criteria-v1";

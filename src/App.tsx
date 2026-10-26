@@ -57,7 +57,7 @@ export function App() {
               {sync}
             </button>
           </div>
-          {tab === "choose" && <ChooseHeader criteria={criteria} setCriteria={setCriteria} openCriteria={() => setCritOpen(true)} />}
+          {tab === "choose" && <ChooseHeader criteria={criteria} openCriteria={() => setCritOpen(true)} />}
           {tab === "wishes" && <WishesHeader filter={filter} setFilter={setFilter} />}
         </header>
         <main>

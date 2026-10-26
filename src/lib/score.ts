@@ -21,6 +21,9 @@ export interface Criteria {
  * saison 25, envies 25, budget 20, trajet par rapport à la durée 10, calme 10, ta liste d'envies 10.
  * Les pénalités (déjà fait, plage non voulue, paludisme avec enfants…) se retirent ensuite.
  */
+/** Critères au premier lancement : le mois prochain, 10 jours, 3 000 €, sans envie ni contrainte. */
+export const DEFAULT_CRITERIA: Criteria = { months: [(new Date().getMonth() + 1) % 12], days: 10, budget: 3000, wants: [], rules: [] };
+
 export const WEIGHTS = { season: 25, wants: 25, budget: 20, trip: 10, calm: 10, list: 10 } as const;
 export const PENALTY = { beachFirst: 20, noWantHit: 5, visited: 15, malaria: 12, malariaPartial: 5, crowded: 5 } as const;
 /** Points « liste » selon la priorité Notion. */

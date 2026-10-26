@@ -59,9 +59,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .pill.on { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 select.pill { appearance: none; -webkit-appearance: none; }
 .pill .n { font: 700 11px var(--body); background: var(--accent); color: var(--on-accent); border-radius: 999px; padding: 1px 6px; }
-.preset { flex: none; font: 500 13px var(--body); color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 5px 11px; background: none; white-space: nowrap; }
-.presets-lbl { flex: none; align-self: center; font: 600 11px var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.preset:active { border-color: var(--accent); color: var(--accent-ink); }
 
 /* ---------- Contenu ---------- */
 main { padding: 4px var(--gutter-r) 24px var(--gutter-l); }

@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { MONTHS, RULES, WANT_LABEL, WANTS, type Rule, type Want } from "../data/catalogue";
-import { PRESETS } from "../data/presets";
 import { Sheet } from "../components/Sheet";
 import { ResultCard } from "../components/ResultCard";
 import { CompareSheet, DetailSheet, resultKey, resultName } from "./Detail";
@@ -23,7 +22,7 @@ interface Props {
 
 const toggle = <T,>(list: readonly T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
-export function ChooseHeader({ criteria: c, setCriteria, openCriteria }: Pick<Props, "criteria" | "setCriteria"> & { openCriteria: () => void }) {
+export function ChooseHeader({ criteria: c, openCriteria }: Pick<Props, "criteria"> & { openCriteria: () => void }) {
   return (
     <>
       <div className="row-scroll" aria-label="Critères">
@@ -39,14 +38,6 @@ export function ChooseHeader({ criteria: c, setCriteria, openCriteria }: Pick<Pr
         <button className="pill" onClick={openCriteria}>
           {c.rules.length ? <>Contraintes <span className="n">{c.rules.length}</span></> : "Sans contrainte"}
         </button>
-      </div>
-      <div className="row-scroll" aria-label="Raccourcis">
-        <span className="presets-lbl">Raccourcis</span>
-        {PRESETS.map((p) => (
-          <button key={p.name} className="preset" onClick={() => setCriteria({ months: p.months, days: p.days, budget: p.budget, wants: p.wants, rules: p.rules })}>
-            {p.name}
-          </button>
-        ))}
       </div>
     </>
   );
