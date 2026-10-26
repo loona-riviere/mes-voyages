@@ -1,0 +1,284 @@
+<title>Mes voyages · directions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Young+Serif&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout : deux maquettes iPhone côte à côte (empilées sur téléphone), chacune avec sa palette, sa typo et une carte de résultat */
+:root{
+  --page:#F1F2F4; --page-ink:#1A1D24; --page-muted:#5E6470; --page-line:#D8DBE1;
+  --ui:"Instrument Sans", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#121419; --page-ink:#E8EAEE; --page-muted:#9AA0AB; --page-line:#2A2E37; color-scheme:dark}}
+:root[data-theme="dark"]{--page:#121419; --page-ink:#E8EAEE; --page-muted:#9AA0AB; --page-line:#2A2E37; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--page-ink);font:15px/1.5 var(--ui);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
+.wrap{max-width:980px;margin:0 auto;display:grid;gap:28px}
+.intro h1{margin:0;font:800 clamp(26px,6vw,36px)/1.1 "Schibsted Grotesk",system-ui,sans-serif;letter-spacing:-.02em;text-wrap:balance}
+.intro p{margin:8px 0 0;color:var(--page-muted);max-width:62ch}
+.grid{display:grid;gap:32px;grid-template-columns:1fr}
+@media (min-width:860px){.grid{grid-template-columns:1fr 1fr}}
+.dir{display:grid;gap:14px;align-content:start;min-width:0}
+.dir-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.dir-h .letter{font:500 13px "JetBrains Mono",monospace;color:var(--page-muted)}
+.dir-h h2{margin:0;font:700 22px/1.2 "Schibsted Grotesk",system-ui,sans-serif}
+.dir > p{margin:0;color:var(--page-muted);font-size:14px;max-width:60ch}
+.spec{display:grid;gap:10px;font-size:13px;color:var(--page-muted)}
+.sw{display:flex;gap:6px;flex-wrap:wrap}
+.sw span{display:grid;gap:4px;font:500 10.5px "JetBrains Mono",monospace;justify-items:center}
+.sw i{width:38px;height:38px;border-radius:10px;border:1px solid var(--page-line);display:block}
+.typo{display:flex;flex-wrap:wrap;gap:4px 14px}
+.typo b{color:var(--page-ink);font-weight:600}
+
+/* ---------- Téléphone ---------- */
+.phone{width:100%;max-width:375px;margin:0 auto;border-radius:44px;border:8px solid #0B0C0F;overflow:hidden;
+  box-shadow:0 18px 50px -20px rgba(0,0,0,.45);height:760px;max-height:calc(100vh - 40px);min-height:620px;
+  display:grid;grid-template-rows:auto 1fr auto;background:var(--bg);color:var(--ink);position:relative}
+.island{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:96px;height:28px;border-radius:20px;background:#0B0C0F;z-index:3}
+.screen{overflow:auto;padding:0 16px 16px;display:grid;gap:14px;align-content:start;scrollbar-width:none}
+.screen::-webkit-scrollbar{display:none}
+.top{padding:52px 16px 10px;display:grid;gap:10px;background:var(--bg);border-bottom:1px solid var(--line)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);background:var(--bar);padding:8px 8px 26px}
+.tab{display:grid;justify-items:center;gap:3px;font:600 11px var(--body);color:var(--muted);background:none;border:0;padding:4px 0}
+.tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-current="page"]{color:var(--accent)}
+.title-row{display:flex;justify-content:space-between;align-items:center}
+.crit{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.crit::-webkit-scrollbar{display:none}
+.pill{flex:none;font:600 13px var(--body);padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);white-space:nowrap}
+.pill.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.presets{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.presets::-webkit-scrollbar{display:none}
+.preset{flex:none;font:500 12.5px var(--body);color:var(--muted);border:1px dashed var(--line);border-radius:999px;padding:4px 10px;background:none;white-space:nowrap}
+.sum{font:500 13px var(--body);color:var(--muted);display:flex;justify-content:space-between;align-items:baseline;padding-top:12px}
+.sum b{color:var(--ink);font-family:var(--display);font-size:17px;font-weight:700}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+.badge{font:600 11px var(--body);padding:3px 8px;border-radius:999px;white-space:nowrap}
+.tag{font:500 12px var(--body);padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.tag.hit{background:var(--accent-soft);border-color:transparent;color:var(--accent-ink)}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.btn{font:600 14px var(--body);border-radius:12px;padding:11px 14px;border:0;width:100%;background:var(--accent-soft);color:var(--accent-ink)}
+
+/* ---------- A · Balise ---------- */
+.dirA{
+  --bg:#EDF0F4; --surface:#FFFFFF; --bar:rgba(255,255,255,.92); --ink:#141A33; --muted:#5D6580; --line:#D5DAE4;
+  --accent:#FF5A1F; --on-accent:#FFFFFF; --accent-soft:#FFE6DB; --accent-ink:#B83A0C;
+  --sky:#2F6BDB; --s0:#DDE2EB; --s1:#9DB9EE; --s2:#2F6BDB;
+  --display:"Schibsted Grotesk", system-ui, sans-serif; --body:"Instrument Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .dirA{
+  --bg:#0C1022; --surface:#161B33; --bar:rgba(22,27,51,.92); --ink:#E9ECF7; --muted:#959DBA; --line:#262D4B;
+  --accent:#FF7A45; --on-accent:#1A0B04; --accent-soft:#3A1E14; --accent-ink:#FFB08C;
+  --sky:#7FA6F5; --s0:#232A47; --s1:#3B5590; --s2:#7FA6F5}}
+:root[data-theme="dark"] .dirA{
+  --bg:#0C1022; --surface:#161B33; --bar:rgba(22,27,51,.92); --ink:#E9ECF7; --muted:#959DBA; --line:#262D4B;
+  --accent:#FF7A45; --on-accent:#1A0B04; --accent-soft:#3A1E14; --accent-ink:#FFB08C;
+  --sky:#7FA6F5; --s0:#232A47; --s1:#3B5590; --s2:#7FA6F5}
+.dirA h3{margin:0;font:800 28px/1 var(--display);letter-spacing:-.02em}
+.cardA{background:var(--surface);border-radius:20px;padding:16px;display:grid;gap:14px;border:1px solid var(--line)}
+.cardA .hd{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start}
+.cardA .rk{font:500 11px "JetBrains Mono",monospace;color:var(--muted);letter-spacing:.06em}
+.cardA .nm{margin:2px 0 0;font:800 25px/1.05 var(--display);letter-spacing:-.02em}
+.cardA .ct{font-size:13.5px;color:var(--muted)}
+.gauge{width:64px;height:64px;position:relative;display:grid;place-items:center}
+.gauge svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.gauge b{font:800 22px/1 var(--display);color:var(--ink)}
+.gauge small{position:absolute;bottom:-14px;font:500 9.5px "JetBrains Mono",monospace;color:var(--muted);letter-spacing:.08em}
+.route{display:flex;align-items:center;gap:8px;font:500 12.5px "JetBrains Mono",monospace;color:var(--ink)}
+.route .line{flex:1;height:0;border-top:1.5px dashed var(--line);position:relative}
+.route .line::after{content:"";position:absolute;right:-1px;top:-4px;width:7px;height:7px;border-radius:50%;background:var(--sky)}
+.route .lbl{color:var(--muted);font-family:var(--body);font-size:12.5px}
+.factsA{display:grid;grid-template-columns:1fr 1fr 1fr;border-block:1px solid var(--line)}
+.factsA div{padding:9px 0;display:grid;gap:1px}
+.factsA div+div{padding-left:10px;border-left:1px solid var(--line)}
+.factsA small{font:600 10px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.factsA b{font:700 15px var(--display);font-variant-numeric:tabular-nums}
+.bars{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;align-items:end;height:30px}
+.bars i{display:block;border-radius:3px 3px 1px 1px;background:var(--s0)}
+.bars i.v0{height:6px}.bars i.v1{height:16px;background:var(--s1)}.bars i.v2{height:28px;background:var(--s2)}
+.bars i.sel{background:var(--accent)}
+.barl{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;font:500 9.5px "JetBrains Mono",monospace;color:var(--muted);text-align:center;margin-top:4px}
+.barl .sel{color:var(--accent-ink);font-weight:700}
+.dirA .badge{background:var(--accent-soft);color:var(--accent-ink)}
+.dirA .why{margin:0;font-size:14px;line-height:1.45}
+.dirA .why span{color:var(--muted)}
+.peekA{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.peekA b{font:800 19px var(--display)}
+.peekA .badge.done{background:var(--s0);color:var(--muted)}
+
+/* ---------- B · Lumière ---------- */
+.dirB{
+  --bg:#EEF0EA; --surface:#FBFCF8; --bar:rgba(251,252,248,.92); --ink:#1D2620; --muted:#5F6B63; --line:#D7DCD2;
+  --accent:#3846B0; --on-accent:#FFFFFF; --accent-soft:#E2E5F7; --accent-ink:#2B378F;
+  --sun:#E6A93A; --sun-soft:#F8EBCF;
+  --s0:#DFE3D9; --s1:#E9C77F; --s2:#D9902A;
+  --sky-a:#F6D9A4; --sky-b:#E89C6A; --sky-c:#9C6FA8;
+  --display:"Young Serif", Georgia, serif; --body:"Figtree", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .dirB{
+  --bg:#141814; --surface:#1D231E; --bar:rgba(29,35,30,.92); --ink:#E9EDE5; --muted:#9CA79E; --line:#2D352E;
+  --accent:#9AA6F5; --on-accent:#141A3D; --accent-soft:#272D52; --accent-ink:#C3CAFA;
+  --sun:#F0BC57; --sun-soft:#3A3018;
+  --s0:#2A312B; --s1:#7A6331; --s2:#F0BC57;
+  --sky-a:#5E4A2A; --sky-b:#6B3B2C; --sky-c:#3B2A4A}}
+:root[data-theme="dark"] .dirB{
+  --bg:#141814; --surface:#1D231E; --bar:rgba(29,35,30,.92); --ink:#E9EDE5; --muted:#9CA79E; --line:#2D352E;
+  --accent:#9AA6F5; --on-accent:#141A3D; --accent-soft:#272D52; --accent-ink:#C3CAFA;
+  --sun:#F0BC57; --sun-soft:#3A3018;
+  --s0:#2A312B; --s1:#7A6331; --s2:#F0BC57;
+  --sky-a:#5E4A2A; --sky-b:#6B3B2C; --sky-c:#3B2A4A}
+.dirB h3{margin:0;font:400 30px/1 var(--display)}
+.cardB{background:var(--surface);border-radius:22px;overflow:hidden;box-shadow:0 1px 0 var(--line),0 8px 24px -16px rgba(30,40,30,.35)}
+.cardB .sky{height:86px;background:linear-gradient(180deg,var(--sky-a),var(--sky-b) 70%,var(--sky-c));position:relative;padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start}
+.cardB .sky::after{content:"";position:absolute;left:0;right:0;bottom:0;height:22px;background:
+  radial-gradient(120% 100% at 30% 100%,var(--surface) 48%,transparent 50%),
+  radial-gradient(90% 100% at 85% 100%,var(--surface) 46%,transparent 48%)}
+.cardB .sc{background:var(--surface);color:var(--ink);border-radius:14px;padding:6px 10px 5px;display:grid;justify-items:center;line-height:1;position:relative;z-index:1}
+.cardB .sc b{font:400 24px var(--display)}
+.cardB .sc small{font:600 9px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:3px}
+.cardB .sky .badge{background:rgba(255,255,255,.85);color:#3A2A12;position:relative;z-index:1}
+.cardB .body{padding:4px 16px 16px;display:grid;gap:12px}
+.cardB .nm{margin:0;font:400 27px/1.05 var(--display)}
+.cardB .ct{font-size:13.5px;color:var(--muted);margin-top:3px}
+.cardB .line{margin:0;font-size:14.5px;line-height:1.45}
+.factsB{display:flex;flex-wrap:wrap;gap:6px}
+.factsB span{font:500 12.5px var(--body);background:var(--bg);border-radius:8px;padding:5px 9px;color:var(--ink)}
+.factsB span b{font-weight:700;font-variant-numeric:tabular-nums}
+.dots{display:grid;grid-template-columns:repeat(12,1fr);gap:4px}
+.dots span{display:grid;justify-items:center;gap:4px;font:600 10px var(--body);color:var(--muted)}
+.dots i{width:14px;height:14px;border-radius:50%;background:var(--s0);display:block}
+.dots .v1 i{background:var(--s1)}.dots .v2 i{background:var(--s2)}
+.dots .sel{color:var(--ink)}
+.dots .sel i{box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--accent)}
+.dirB .why{margin:0;font-size:13px;color:var(--muted)}
+.peekB{background:var(--surface);border-radius:22px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 0 var(--line)}
+.peekB b{font:400 20px var(--display)}
+.peekB .badge{background:var(--bg);color:var(--muted)}
+.dirB .pill.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+
+@media (prefers-reduced-motion:no-preference){
+  .cardA,.cardB{animation:rise .35s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes rise{from{transform:translateY(6px)}to{transform:none}}
+}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>Deux directions pour Mes voyages</h1>
+    <p>Même écran « Choisir » dans les deux cas : critères compacts en haut, première carte de résultat, barre d'onglets collée en bas. Exemple avec le preset « Safari 2027 » (septembre, 15 jours, 5 000 € / pers.). Le thème clair ou sombre suit ton téléphone.</p>
+  </header>
+
+  <div class="grid">
+    <!-- ===================== A ===================== -->
+    <section class="dir">
+      <div class="dir-h"><span class="letter">A</span><h2>Balise</h2></div>
+      <p>Net et précis, inspiré des instruments de navigation : bleu nuit, orange balise, chiffres en mono. Le score est une jauge, la saisonnalité un petit histogramme.</p>
+      <div class="spec">
+        <div class="sw">
+          <span><i style="background:#EDF0F4"></i>fond</span>
+          <span><i style="background:#141A33"></i>encre</span>
+          <span><i style="background:#FF5A1F"></i>balise</span>
+          <span><i style="background:#2F6BDB"></i>ciel</span>
+          <span><i style="background:#0C1022"></i>nuit</span>
+        </div>
+        <div class="typo"><span><b>Schibsted Grotesk</b> titres</span><span><b>Instrument Sans</b> texte</span><span><b>JetBrains Mono</b> codes, chiffres</span></div>
+      </div>
+
+      <div class="phone dirA" aria-label="Maquette direction A">
+        <div class="island"></div>
+        <div class="top">
+          <div class="title-row"><h3>Choisir</h3><span class="badge">Notion à jour</span></div>
+          <div class="crit">
+            <button class="pill on">Sept.</button><button class="pill">15 j</button><button class="pill">5 000 €</button><button class="pill on">Faune</button><button class="pill on">Nature</button><button class="pill">Pas de plage</button><button class="pill">Peu de monde</button>
+          </div>
+          <div class="presets"><button class="preset">Safari 2027</button><button class="preset">Les 30 ans en janvier</button><button class="preset">Jordanie en mai</button></div>
+        </div>
+        <div class="screen">
+          <div class="sum"><b>8 idées</b><span>2 écartées</span></div>
+          <article class="cardA">
+            <div class="hd">
+              <div>
+                <div class="rk">01 · TOP</div>
+                <h4 class="nm">Namibie</h4>
+                <div class="ct">Namibie · <span class="badge">Sur ta liste</span></div>
+              </div>
+              <div class="gauge" aria-label="Score 92 sur 100">
+                <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" fill="none" stroke="var(--s0)" stroke-width="5"/><circle cx="32" cy="32" r="27" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-dasharray="156 170"/></svg>
+                <b>92</b><small>/100</small>
+              </div>
+            </div>
+            <div class="route"><span>CDG</span><span class="line"></span><span>WDH</span><span class="lbl">13h · 1 escale</span></div>
+            <div class="factsA">
+              <div><small>Coût</small><b>≈ 3 950 €</b></div>
+              <div><small>Monde</small><b>Calme</b></div>
+              <div><small>Saison</small><b>Idéale</b></div>
+            </div>
+            <div>
+              <div class="bars" aria-label="Saisonnalité sur 12 mois"><i class="v1"></i><i class="v1"></i><i class="v1"></i><i class="v2"></i><i class="v2"></i><i class="v2"></i><i class="v2"></i><i class="v2"></i><i class="v2 sel"></i><i class="v2"></i><i class="v1"></i><i class="v1"></i></div>
+              <div class="barl"><span>J</span><span>F</span><span>M</span><span>A</span><span>M</span><span>J</span><span>J</span><span>A</span><span class="sel">S</span><span>O</span><span>N</span><span>D</span></div>
+            </div>
+            <p class="why">Dunes de Sossusvlei, Etosha et grands espaces vides. <span>Très bonne saison en septembre.</span></p>
+            <div class="tags"><span class="tag hit">Faune sauvage</span><span class="tag">Désert</span><span class="tag hit">Nature & paysages</span></div>
+          </article>
+          <div class="peekA"><div><div class="rk mono" style="font-size:11px;color:var(--muted)">02</div><b>Kenya</b></div><span class="badge done">Déjà fait en 2024</span></div>
+        </div>
+        <nav class="tabs">
+          <button class="tab" aria-current="page"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>Choisir</button>
+          <button class="tab"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>Envies</button>
+          <button class="tab"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="19" cy="12" r="1.5"/></svg>Voyages faits</button>
+        </nav>
+      </div>
+    </section>
+
+    <!-- ===================== B ===================== -->
+    <section class="dir">
+      <div class="dir-h"><span class="letter">B</span><h2>Lumière</h2></div>
+      <p>Plus doux et éditorial : chaque carte s'ouvre sur un ciel dégradé qui évoque la lumière du lieu (sable, lagon, neige), une serif pour les noms, la saison en pastilles.</p>
+      <div class="spec">
+        <div class="sw">
+          <span><i style="background:#EEF0EA"></i>fond</span>
+          <span><i style="background:#1D2620"></i>encre</span>
+          <span><i style="background:#3846B0"></i>indigo</span>
+          <span><i style="background:#D9902A"></i>soleil</span>
+          <span><i style="background:linear-gradient(180deg,#F6D9A4,#E89C6A,#9C6FA8)"></i>ciel</span>
+        </div>
+        <div class="typo"><span><b>Young Serif</b> titres</span><span><b>Figtree</b> texte</span><span><b>JetBrains Mono</b> codes</span></div>
+      </div>
+
+      <div class="phone dirB" aria-label="Maquette direction B">
+        <div class="island"></div>
+        <div class="top">
+          <div class="title-row"><h3>Où partir ?</h3><span class="badge" style="background:var(--accent-soft);color:var(--accent-ink)">Notion à jour</span></div>
+          <div class="crit">
+            <button class="pill on">Septembre</button><button class="pill">15 jours</button><button class="pill">5 000 €</button><button class="pill on">Faune</button><button class="pill on">Nature</button><button class="pill">Pas de plage</button>
+          </div>
+          <div class="presets"><button class="preset">Safari 2027</button><button class="preset">Les 30 ans en janvier</button><button class="preset">Jordanie en mai</button></div>
+        </div>
+        <div class="screen">
+          <div class="sum"><b>8 idées</b><span>sept. · 15 j · 5 000 €</span></div>
+          <article class="cardB">
+            <div class="sky"><span class="badge">Sur ta liste</span><span class="sc"><b>92</b><small>sur 100</small></span></div>
+            <div class="body">
+              <div><h4 class="nm">Namibie</h4><div class="ct"><span class="mono">CDG → WDH</span> · 13 h avec escale</div></div>
+              <p class="line">Dunes de Sossusvlei, Etosha et grands espaces vides : road trip en autonomie.</p>
+              <div class="factsB"><span>≈ <b>3 950 €</b> / pers.</span><span>Peu fréquenté</span><span>9 j conseillés</span></div>
+              <div class="dots" aria-label="Saisonnalité sur 12 mois">
+                <span class="v1"><i></i>J</span><span class="v1"><i></i>F</span><span class="v1"><i></i>M</span><span class="v2"><i></i>A</span><span class="v2"><i></i>M</span><span class="v2"><i></i>J</span><span class="v2"><i></i>J</span><span class="v2"><i></i>A</span><span class="v2 sel"><i></i>S</span><span class="v2"><i></i>O</span><span class="v1"><i></i>N</span><span class="v1"><i></i>D</span>
+              </div>
+              <div class="tags"><span class="tag hit">Faune sauvage</span><span class="tag">Désert</span><span class="tag hit">Nature & paysages</span></div>
+              <p class="why">Très bonne saison en septembre.</p>
+            </div>
+          </article>
+          <div class="peekB"><b>Kenya</b><span class="badge">Déjà fait en 2024</span></div>
+        </div>
+        <nav class="tabs">
+          <button class="tab" aria-current="page"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>Choisir</button>
+          <button class="tab"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>Envies</button>
+          <button class="tab"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="19" cy="12" r="1.5"/></svg>Voyages faits</button>
+        </nav>
+      </div>
+    </section>
+  </div>
+</div>
