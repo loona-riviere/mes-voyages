@@ -19,7 +19,6 @@ export interface Wish {
   bestMonths: number[];
   idealDays: number | null;
   budget: number | null;
-  withWhom: string | null;
   kids: Kids | null;
   priority: Priority | null;
   status: WishStatus | null;
@@ -47,7 +46,6 @@ export interface NewWish {
   bestMonths?: number[];
   idealDays?: number | null;
   budget?: number | null;
-  withWhom?: string | null;
   kids?: Kids | null;
   priority?: Priority;
   status?: WishStatus;

@@ -16,7 +16,7 @@ const neutral: Criteria = { months: [4], days: 10, budget: 3000, wants: [], rule
 
 const wish = (over: Partial<Wish>): Wish => ({
   id: "w1", url: "https://notion.so/w1", name: "Idée", country: "", wants: [], bestMonths: [],
-  idealDays: null, budget: null, withWhom: null, kids: null, priority: null, status: null, notes: "", ...over,
+  idealDays: null, budget: null, kids: null, priority: null, status: null, notes: "", ...over,
 });
 const trip = (over: Partial<Trip>): Trip => ({
   id: "t1", url: "https://notion.so/t1", name: "Voyage", status: "Visité", start: "2024-08-01", end: "2024-08-15",

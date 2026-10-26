@@ -61,7 +61,7 @@ export function Wishes({ notion, filter, onOpen }: { notion: NotionData; filter:
           <div className="wish-top">
             <div>
               <h3>{w.name}</h3>
-              <div className="sub">{[w.country, w.kids, w.withWhom && `avec ${w.withWhom}`].filter(Boolean).join(" · ")}</div>
+              <div className="sub">{[w.country, w.kids].filter(Boolean).join(" · ")}</div>
             </div>
             <span className={prioClass(w.priority)}>{w.priority ?? "—"}</span>
           </div>
@@ -126,7 +126,6 @@ export function WishSheet({ wish, onClose, notion, toast }: { wish: Wish | null;
             <dt>Pays</dt><dd>{w.country || "—"}</dd>
             <dt>Durée idéale</dt><dd>{w.idealDays ? `${w.idealDays} jours` : "—"}</dd>
             <dt>Budget / pers.</dt><dd>{w.budget ? euros(w.budget) : "—"}</dd>
-            <dt>Avec qui</dt><dd>{w.withWhom ?? "—"}</dd>
             <dt>Enfants</dt><dd>{w.kids ?? "—"}</dd>
             {w.notes && <><dt>Notes</dt><dd className="notes">{w.notes}</dd></>}
           </dl>

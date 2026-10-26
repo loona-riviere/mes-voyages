@@ -30,7 +30,7 @@ export const isLocalId = (id: string) => id.startsWith("local-");
 export function localWish(localId: string, w: NewWish): Wish {
   return {
     id: localId, url: "", name: w.name, country: w.country ?? "", wants: w.wants ?? [], bestMonths: w.bestMonths ?? [],
-    idealDays: w.idealDays ?? null, budget: w.budget ?? null, withWhom: w.withWhom ?? null, kids: w.kids ?? null,
+    idealDays: w.idealDays ?? null, budget: w.budget ?? null, kids: w.kids ?? null,
     priority: w.priority ?? "Envie", status: w.status ?? "Idée", notes: w.notes ?? "",
   };
 }

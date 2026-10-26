@@ -40,7 +40,7 @@ describe("lecture Notion", () => {
     expect(toWish(wishPage)).toEqual({
       id: "abc", url: "https://app.notion.com/p/abc", name: "Safari en Namibie", country: "Namibie",
       wants: ["Faune sauvage", "Désert"], bestMonths: [7, 8], idealDays: 15, budget: 4500,
-      withWhom: "Julien", kids: "Sans enfants", priority: "Très envie", status: null, notes: "Plutôt en 4x4",
+      kids: "Sans enfants", priority: "Très envie", status: null, notes: "Plutôt en 4x4",
     });
   });
 

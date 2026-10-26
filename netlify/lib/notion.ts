@@ -9,7 +9,6 @@ export const TRIPS_DATA_SOURCE = "8195c0cd-68d2-408e-afce-409b3f113982";
 export const WISHES_DATA_SOURCE = "f84d6097-98c1-4b04-8fa9-bb7bcd36b7a4";
 
 const WANT_LABELS: readonly string[] = WANTS.map((w) => w.label);
-const WITH_WHOM = ["Julien", "Copains", "Famille", "Seule"];
 const KIDS: readonly Kids[] = ["Sans enfants", "Avec enfants"];
 const TRIP_STATUSES: readonly TripStatus[] = ["À visiter", "À planifier", "En cours", "Visité"];
 
@@ -150,7 +149,6 @@ export function toWish(p: Page): Wish {
       .sort((a, b) => a - b),
     idealDays: num(p, "Durée idéale (jours)"),
     budget: num(p, "Budget estimé / pers"),
-    withWhom: option(p, "Avec qui"),
     kids: oneOf(KIDS, option(p, "Enfants")),
     priority: oneOf(PRIORITIES, option(p, "Priorité")),
     status: oneOf(WISH_STATUSES, option(p, "Statut")),
@@ -221,7 +219,6 @@ export function newWishProperties(input: NewWish): Record<string, unknown> {
   if (days !== null) props["Durée idéale (jours)"] = { number: days };
   const budget = positive(input.budget, "Budget");
   if (budget !== null) props["Budget estimé / pers"] = { number: budget };
-  if (input.withWhom) props["Avec qui"] = sel(check(WITH_WHOM, input.withWhom, "Avec qui"));
   if (input.kids) props["Enfants"] = sel(check(KIDS, input.kids, "Enfants"));
   return props;
 }
