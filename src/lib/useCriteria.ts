@@ -9,10 +9,13 @@ const ruleKeys = RULES.map((r) => r.key as string);
 
 function load(): Criteria {
   try {
-    const c = JSON.parse(localStorage.getItem(KEY) ?? "null") as Partial<Criteria> | null;
+    const c = JSON.parse(localStorage.getItem(KEY) ?? "null") as (Partial<Criteria> & { month?: number }) | null;
     if (!c) return DEFAULT_CRITERIA;
+    // Ancienne version : un seul mois.
+    const raw = c.months ?? (c.month !== undefined ? [c.month] : []);
+    const months = raw.filter((m) => Number.isInteger(m) && m >= 0 && m < MONTHS.length);
     return {
-      month: Number.isInteger(c.month) && c.month! >= 0 && c.month! < MONTHS.length ? c.month! : DEFAULT_CRITERIA.month,
+      months: months.length ? months : DEFAULT_CRITERIA.months,
       days: Math.min(21, Math.max(2, Number(c.days) || DEFAULT_CRITERIA.days)),
       budget: Math.max(0, Number(c.budget) || DEFAULT_CRITERIA.budget),
       wants: (c.wants ?? []).filter((w): w is Want => wantKeys.includes(w)),

@@ -53,6 +53,12 @@ export interface Destination {
   /** 0 = peu fréquenté, 2 = très fréquenté */
   crowd: Level;
   pitch: string;
+  /** Mois où le vol direct existe (vols saisonniers). Absent : toute l'année si `direct`. */
+  directMonths?: readonly number[];
+  /** Zone de paludisme : « partiel » quand seule une partie du pays est concernée */
+  malaria: boolean | "partiel";
+  /** Moments forts par mois (0 = janvier) */
+  highlights?: Readonly<Record<number, string>>;
 }
 
 type Row = [string, string, string, number, 0 | 1, number, number, Want[], Season, Level, string];
@@ -69,7 +75,7 @@ const ROWS: Row[] = [
   ["Écosse", "Royaume-Uni", "EDI", 1.7, 1, 150, 140, ["nature", "rando", "culture"], [0, 0, 1, 1, 2, 2, 2, 2, 2, 1, 0, 0], 1, "Highlands, îles et distilleries, à moins de deux heures de vol."],
   ["Islande", "Islande", "KEF", 3.3, 1, 320, 220, ["nature", "rando", "neige"], [1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 0, 1], 1, "Glaciers, cascades et aurores boréales l'hiver."],
   ["Lofoten", "Norvège", "BOO", 4.5, 0, 380, 190, ["nature", "rando", "neige"], [1, 1, 1, 0, 1, 2, 2, 2, 1, 0, 0, 1], 1, "Pics plongeant dans la mer, randonnées sous le soleil de minuit."],
-  ["Laponie", "Finlande", "RVN", 3.8, 0, 450, 210, ["neige", "nature", "faune"], [2, 2, 2, 0, 0, 1, 1, 0, 1, 0, 0, 2], 1, "Chiens de traîneau, rennes et aurores."],
+  ["Laponie", "Finlande", "RVN", 3.8, 1, 450, 210, ["neige", "nature", "faune"], [2, 2, 2, 0, 0, 1, 1, 0, 1, 0, 0, 2], 1, "Chiens de traîneau, rennes et aurores."],
   ["Géorgie", "Géorgie", "TBS", 4.8, 1, 320, 70, ["rando", "gastro", "culture", "nature"], [0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 1, 0], 0, "Caucase sauvage, vin en amphore et monastères perchés."],
   ["Jordanie", "Jordanie", "AMM", 4.8, 1, 400, 130, ["desert", "culture", "rando", "plongee"], [0, 1, 2, 2, 2, 1, 0, 0, 1, 2, 2, 1], 1, "Pétra, Wadi Rum et la mer Rouge à Aqaba."],
   ["Égypte", "Égypte", "HRG", 4.8, 1, 380, 80, ["culture", "plongee", "desert", "plage"], [2, 2, 2, 2, 1, 0, 0, 0, 1, 2, 2, 2], 2, "Temples du Nil et récifs parmi les plus beaux de la mer Rouge."],
@@ -78,8 +84,8 @@ const ROWS: Row[] = [
   ["Sénégal", "Sénégal", "DSS", 5.5, 1, 480, 85, ["culture", "plage", "nature", "faune"], [2, 2, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2], 0, "Sine Saloum, île de Gorée et lumière douce de l'hiver."],
   ["Cap-Vert", "Cap-Vert", "SID", 6, 1, 450, 90, ["plage", "rando", "nature"], [2, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2], 1, "Randonnées volcaniques à Santo Antão et plages de Sal."],
   ["Kenya", "Kenya", "NBO", 8.5, 1, 800, 280, ["faune", "nature"], [2, 2, 1, 0, 0, 1, 2, 2, 2, 2, 1, 2], 1, "Masai Mara et la grande migration de juillet à octobre."],
-  ["Tanzanie", "Tanzanie", "JRO", 11, 0, 900, 300, ["faune", "nature", "plage"], [2, 2, 1, 0, 0, 2, 2, 2, 2, 2, 1, 2], 1, "Serengeti, cratère du Ngorongoro et Kilimandjaro."],
-  ["Namibie", "Namibie", "WDH", 13, 0, 950, 200, ["faune", "desert", "nature"], [1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1], 0, "Dunes de Sossusvlei, Etosha et grands espaces vides : road trip en autonomie."],
+  ["Tanzanie", "Tanzanie", "JRO", 9, 1, 900, 300, ["faune", "nature", "plage"], [2, 2, 1, 0, 0, 2, 2, 2, 2, 2, 1, 2], 1, "Serengeti, cratère du Ngorongoro et Kilimandjaro."],
+  ["Namibie", "Namibie", "WDH", 13, 0, 950, 200, ["faune", "desert", "nature"], [0, 0, 1, 1, 2, 2, 2, 2, 2, 1, 1, 0], 0, "Dunes de Sossusvlei, Etosha et grands espaces vides : road trip en autonomie."],
   ["Botswana", "Botswana", "MUB", 14, 0, 1150, 450, ["faune", "nature"], [0, 0, 0, 1, 1, 2, 2, 2, 2, 2, 1, 0], 0, "Delta de l'Okavango en mokoro, safari très peu fréquenté."],
   ["Afrique du Sud", "Afrique du Sud", "CPT", 11.5, 1, 900, 160, ["faune", "nature", "gastro", "rando"], [2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2], 1, "Le Cap, les vignobles et un safari dans le Kruger."],
   ["Madagascar", "Madagascar", "TNR", 11, 1, 950, 110, ["nature", "faune", "plongee", "plage"], [0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], 0, "Lémuriens, baobabs et tsingy, une faune qu'on ne voit nulle part ailleurs."],
@@ -91,13 +97,47 @@ const ROWS: Row[] = [
   ["Patagonie", "Argentine & Chili", "FTE", 17, 0, 1200, 160, ["nature", "rando", "faune"], [2, 2, 2, 1, 0, 0, 0, 0, 0, 1, 2, 2], 0, "Fitz Roy, glacier Perito Moreno et Torres del Paine."],
   ["Japon", "Japon", "HND", 14, 1, 950, 170, ["culture", "ville", "gastro", "nature"], [1, 1, 2, 2, 2, 0, 0, 0, 1, 2, 2, 1], 2, "Kyoto, Alpes japonaises et onsen, idéal au printemps et à l'automne."],
   ["Vietnam", "Vietnam", "HAN", 12, 1, 750, 70, ["culture", "gastro", "nature", "plage"], [1, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1], 2, "Baie d'Halong, rizières du Nord et cuisine de rue."],
-  ["Sri Lanka", "Sri Lanka", "CMB", 13, 0, 700, 80, ["culture", "nature", "faune", "plage"], [2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2], 1, "Temples, plantations de thé et éléphants de Minneriya."],
+  ["Sri Lanka", "Sri Lanka", "CMB", 10.3, 1, 930, 80, ["culture", "nature", "faune", "plage"], [2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2], 1, "Temples, plantations de thé et éléphants de Minneriya."],
   ["Thaïlande", "Thaïlande", "BKK", 11.5, 1, 700, 80, ["plage", "culture", "gastro", "plongee"], [2, 2, 2, 1, 1, 0, 0, 0, 0, 1, 2, 2], 2, "Îles d'Andaman, temples de Chiang Mai et street food."],
   ["Indonésie", "Bali & Komodo", "DPS", 17, 0, 950, 90, ["plongee", "plage", "nature", "culture"], [1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1], 2, "Rizières de Bali et plongée avec les raies manta à Komodo."],
 ];
 
+const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
+const MIGRATION_MARA = "Grande migration : traversées de la rivière Mara, pic fin août – septembre";
+
+// Compléments vérifiés en octobre 2026 (vols directs, paludisme, moments forts). Voir docs/sources.md.
+type Extra = Partial<Pick<Destination, "directMonths" | "malaria" | "highlights">>;
+const EXTRAS: Record<string, Extra> = {
+  PDL: { directMonths: range(5, 9) },
+  FNC: { directMonths: range(3, 9) },
+  RVN: { directMonths: [0, 1, 2, 11] },
+  TBS: { directMonths: range(5, 9) },
+  DSS: { malaria: true },
+  NBO: {
+    malaria: true,
+    highlights: { 6: "Arrivée de la grande migration au Masai Mara", 7: MIGRATION_MARA, 8: MIGRATION_MARA, 9: "Fin de la migration au Masai Mara" },
+  },
+  JRO: {
+    malaria: true,
+    highlights: {
+      0: "Naissances des gnous dans le sud du Serengeti", 1: "Pic des naissances dans le sud du Serengeti",
+      5: "Traversées de la Grumeti, ouest du Serengeti", 6: "Migration dans le nord du Serengeti",
+      7: MIGRATION_MARA, 8: MIGRATION_MARA,
+    },
+  },
+  WDH: {
+    malaria: "partiel",
+    highlights: { 6: "Nuits froides, animaux aux points d'eau d'Etosha", 7: "Animaux concentrés aux points d'eau d'Etosha", 8: "Animaux concentrés à Etosha, journées chaudes", 9: "Très chaud, fin de la saison sèche" },
+  },
+  MUB: { malaria: true },
+  CPT: { malaria: "partiel" },
+  TNR: { malaria: true },
+  DPS: { malaria: "partiel" },
+};
+
 export const CATALOGUE: readonly Destination[] = ROWS.map(
   ([name, country, airport, flightHours, direct, flightPrice, dailyBudget, wants, season, crowd, pitch]) => ({
     name, country, airport, flightHours, direct: direct === 1, flightPrice, dailyBudget, wants, season, crowd, pitch,
+    malaria: false, ...EXTRAS[airport],
   }),
 );

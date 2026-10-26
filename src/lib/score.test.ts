@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CATALOGUE, type Destination } from "../data/catalogue";
 import type { Trip, Wish } from "../shared/types";
 import {
-  explain, minDaysFor, rank, scoreCore, scoreDestination, scoreWish, tripCost, type Criteria,
+  explain, isDirect, minDaysFor, prosCons, rank, scoreCore, scoreDestination, scoreWish, tripCost, type Criteria,
 } from "./score";
 
 const dest = (name: string): Destination => {
@@ -11,8 +11,8 @@ const dest = (name: string): Destination => {
   return d;
 };
 
-const safari: Criteria = { month: 8, days: 15, budget: 5000, wants: ["faune", "nature"], rules: ["noBeach", "calm"] };
-const neutral: Criteria = { month: 4, days: 10, budget: 3000, wants: [], rules: [] };
+const safari: Criteria = { months: [8], days: 15, budget: 5000, wants: ["faune", "nature"], rules: ["noBeach", "calm"] };
+const neutral: Criteria = { months: [4], days: 10, budget: 3000, wants: [], rules: [] };
 
 const wish = (over: Partial<Wish>): Wish => ({
   id: "w1", url: "https://notion.so/w1", name: "Idée", country: "", wants: [], bestMonths: [],
@@ -97,6 +97,7 @@ describe("scoreDestination", () => {
     expect(scoreDestination(kenya, safari).score).toBe(97);
     expect(scoreDestination(kenya, safari, { trip: trip({ name: "Kenya" }) }).score).toBe(82);
     expect(scoreDestination(dest("Botswana"), safari, { wish: wish({ priority: "Un jour" }) }).score).toBe(83);
+    expect(scoreDestination(dest("Botswana"), safari, { wish: wish({ priority: "Un jour", kids: "Sans enfants" }) }).score).toBe(87);
     const sicile = scoreDestination(dest("Sicile"), neutral).score;
     expect(scoreDestination(dest("Sicile"), neutral, { wish: wish({ priority: "Envie" }) }).score).toBe(Math.min(100, sicile + 6));
   });
@@ -128,8 +129,15 @@ describe("rank", () => {
 
   it("écarte les vols avec escale si « vol direct » est coché", () => {
     const { results, hiddenNotDirect } = rank({ ...safari, rules: ["direct"] });
-    expect(hiddenNotDirect).toBe(CATALOGUE.filter((d) => !d.direct).length);
-    expect(results.every((r) => r.kind !== "destination" || r.destination.direct)).toBe(true);
+    expect(hiddenNotDirect).toBe(CATALOGUE.filter((d) => !isDirect(d, [8])).length);
+    expect(results.every((r) => r.kind !== "destination" || r.direct)).toBe(true);
+  });
+
+  it("tient compte des vols directs saisonniers", () => {
+    const laponie = CATALOGUE.find((d) => d.name === "Laponie")!;
+    expect(isDirect(laponie, [0])).toBe(true);
+    expect(isDirect(laponie, [6])).toBe(false);
+    expect(isDirect(laponie, [6, 11])).toBe(true);
   });
 
   it("rattache une envie au catalogue, sinon l'ajoute comme carte à part", () => {
@@ -152,6 +160,38 @@ describe("rank", () => {
     const find = (n: string) => results.find((r) => r.kind === "destination" && r.destination.name === n);
     expect((find("Kenya") as { trip?: Trip }).trip?.id).toBe("t1");
     expect((find("Japon") as { trip?: Trip }).trip).toBeUndefined();
+  });
+});
+
+describe("plusieurs mois", () => {
+  it("note chaque destination sur son meilleur mois", () => {
+    const r = scoreDestination(dest("Jordanie"), { ...neutral, months: [6, 9] });
+    expect(r.month).toBe(9);
+    expect(r.season).toBe(2);
+    expect(explain(r, { ...neutral, months: [6, 9] })).toMatch(/^Très bonne saison en octobre/);
+  });
+
+  it("annonce la mauvaise saison sur tous les mois envisagés", () => {
+    const c = { ...neutral, months: [6, 7] };
+    expect(explain(scoreDestination(dest("Égypte"), c), c)).toMatch(/^Mauvaise saison en juillet ou août/);
+  });
+});
+
+describe("avec enfants", () => {
+  it("pénalise les zones de paludisme", () => {
+    const kids = { ...safari, rules: ["kids"] } as Criteria;
+    const without = scoreDestination(dest("Kenya"), { ...safari, rules: [] }).points;
+    expect(scoreDestination(dest("Kenya"), kids).points).toBe(without - 12);
+    expect(scoreDestination(dest("Namibie"), kids).parts.adjustments).toContainEqual({ label: "Paludisme dans une partie du pays", points: -5 });
+  });
+});
+
+describe("prosCons", () => {
+  it("liste les points forts et faibles de la Tanzanie pour le safari", () => {
+    const r = scoreDestination(dest("Tanzanie"), safari);
+    const { pros, cons } = prosCons(r, safari);
+    expect(pros).toEqual(["Idéal en septembre", "Faune sauvage, Nature & paysages", "Vol direct"]);
+    expect(cons).toEqual([expect.stringMatching(/^400.€ au-dessus du budget$/), "Affluence moyenne"]);
   });
 });
 

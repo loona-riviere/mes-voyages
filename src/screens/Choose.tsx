@@ -3,6 +3,7 @@ import { MONTHS, RULES, WANT_LABEL, WANTS, type Rule, type Want } from "../data/
 import { PRESETS } from "../data/presets";
 import { Sheet } from "../components/Sheet";
 import { ResultCard } from "../components/ResultCard";
+import { CompareSheet, DetailSheet, resultKey, resultName } from "./Detail";
 import { roundTo50 } from "../lib/format";
 import { rank, tripCost, type Criteria, type DestinationResult } from "../lib/score";
 import type { NotionData } from "../lib/useNotion";
@@ -26,7 +27,9 @@ export function ChooseHeader({ criteria: c, setCriteria, openCriteria }: Pick<Pr
   return (
     <>
       <div className="row-scroll" aria-label="Critères">
-        <button className="pill on" onClick={openCriteria}>{MONTHS[c.month]}</button>
+        <button className="pill on" onClick={openCriteria}>
+          {c.months.length === 1 ? MONTHS[c.months[0]] : [...c.months].sort((a, b) => a - b).map((m) => MONTHS[m].slice(0, 3)).join(" · ")}
+        </button>
         <button className="pill" onClick={openCriteria}>{c.days} jours</button>
         <button className="pill" onClick={openCriteria}>{c.budget.toLocaleString("fr-FR")} €</button>
         <button className="pill" onClick={openCriteria}>
@@ -39,7 +42,7 @@ export function ChooseHeader({ criteria: c, setCriteria, openCriteria }: Pick<Pr
       </div>
       <div className="row-scroll" aria-label="Départs rapides">
         {PRESETS.map((p) => (
-          <button key={p.name} className="preset" onClick={() => setCriteria({ month: p.month, days: p.days, budget: p.budget, wants: p.wants, rules: p.rules })}>
+          <button key={p.name} className="preset" onClick={() => setCriteria({ months: p.months, days: p.days, budget: p.budget, wants: p.wants, rules: p.rules })}>
             {p.name}
           </button>
         ))}
@@ -60,12 +63,19 @@ export function CriteriaSheet({ open, onClose, criteria: c, setCriteria, count }
       footer={<button className="btn primary" onClick={onClose}>Voir les {count} destinations</button>}
     >
       <section>
-        <div className="lbl">Mois du départ <b>{MONTHS[c.month]}</b></div>
+        <div className="lbl">Mois du départ <b>{c.months.length > 1 ? `${c.months.length} mois` : MONTHS[c.months[0]]}</b></div>
         <div className="months">
           {MONTHS.map((m, i) => (
-            <button key={m} aria-pressed={i === c.month} aria-label={m} onClick={() => set({ month: i })}>{m.slice(0, 3)}</button>
+            <button key={m} aria-pressed={c.months.includes(i)} aria-label={m}
+              onClick={() => {
+                const next = toggle(c.months, i);
+                if (next.length) set({ months: next });
+              }}>
+              {m.slice(0, 3)}
+            </button>
           ))}
         </div>
+        <p className="hint">Touche plusieurs mois si vous hésitez : chaque destination est notée sur son meilleur mois.</p>
       </section>
       <section>
         <div className="lbl"><label htmlFor="days">Durée</label> <b>{c.days} jours</b></div>
@@ -102,6 +112,9 @@ export function CriteriaSheet({ open, onClose, criteria: c, setCriteria, count }
 export function Choose({ criteria, notion, toast, onOpenWish }: Props) {
   const [shown, setShown] = useState(8);
   const [adding, setAdding] = useState<string | null>(null);
+  const [detail, setDetail] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [comparing, setComparing] = useState(false);
   const { results, hiddenNotDirect } = useMemo(
     () => rank(criteria, { wishes: notion.wishes, trips: notion.trips }),
     [criteria, notion.wishes, notion.trips],
@@ -131,6 +144,14 @@ export function Choose({ criteria, notion, toast, onOpenWish }: Props) {
   };
 
   const list = results.slice(0, shown);
+  const byKey = (k: string) => results.find((r) => resultKey(r) === k);
+  const detailResult = detail ? byKey(detail) ?? null : null;
+  const pickedResults = picked.map(byKey).filter((r): r is NonNullable<typeof r> => !!r);
+  const togglePick = (k: string) => {
+    if (picked.includes(k)) return setPicked(picked.filter((x) => x !== k));
+    if (picked.length >= 3) return toast("3 destinations maximum dans la comparaison");
+    setPicked([...picked, k]);
+  };
   return (
     <div className="screen">
       <div className="sum">
@@ -140,19 +161,48 @@ export function Choose({ criteria, notion, toast, onOpenWish }: Props) {
       {list.length === 0 && <div className="empty">Aucune destination ne passe ces contraintes. Essaie d'autoriser les escales.</div>}
       {list.map((r, i) => (
         <ResultCard
-          key={r.kind === "destination" ? r.destination.airport : r.wish.id}
+          key={resultKey(r)}
           result={r}
           rank={i + 1}
           criteria={criteria}
           adding={r.kind === "destination" && adding === r.destination.airport}
           onAdd={r.kind === "destination" ? () => add(r) : undefined}
           onOpenWish={onOpenWish}
+          onOpen={() => setDetail(resultKey(r))}
+          comparing={picked.includes(resultKey(r))}
+          onToggleCompare={() => togglePick(resultKey(r))}
         />
       ))}
       {results.length > shown && (
         <button className="more" onClick={() => setShown(shown + 8)}>Voir {Math.min(8, results.length - shown)} de plus</button>
       )}
       <p className="note">Coûts et temps de vol estimés depuis Paris : vol A/R en éco et budget moyen sur place. Les vols directs peuvent être saisonniers.</p>
+      {picked.length > 0 && (
+        <div className="cmp-bar" role="region" aria-label="Comparaison">
+          <span>{pickedResults.map(resultName).join(" · ")}</span>
+          <button className="btn primary" onClick={() => setComparing(true)} disabled={picked.length < 2}>
+            {picked.length < 2 ? "Choisis-en une autre" : `Comparer (${picked.length})`}
+          </button>
+          <button className="x" onClick={() => setPicked([])} aria-label="Vider la comparaison">×</button>
+        </div>
+      )}
+      <DetailSheet
+        result={detailResult}
+        criteria={criteria}
+        onClose={() => setDetail(null)}
+        comparing={!!detail && picked.includes(detail)}
+        onToggleCompare={() => detail && togglePick(detail)}
+        onAdd={detailResult?.kind === "destination" ? () => add(detailResult) : undefined}
+        onOpenWish={(id) => { setDetail(null); onOpenWish(id); }}
+      />
+      <CompareSheet
+        open={comparing}
+        results={pickedResults}
+        criteria={criteria}
+        notion={{ wishes: notion.wishes, trips: notion.trips }}
+        onClose={() => setComparing(false)}
+        onRemove={(k) => setPicked(picked.filter((x) => x !== k))}
+      />
     </div>
   );
 }

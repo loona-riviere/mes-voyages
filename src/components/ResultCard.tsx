@@ -1,6 +1,6 @@
 import { WANT_LABEL, type Want } from "../data/catalogue";
 import { euros, flightTime } from "../lib/format";
-import { explain, type Criteria, type Result } from "../lib/score";
+import { highlight, prosCons, type Criteria, type Result } from "../lib/score";
 import { skyGradient } from "../lib/sky";
 import { SeasonDots } from "./SeasonDots";
 
@@ -13,6 +13,9 @@ interface Props {
   onAdd?: () => void;
   adding?: boolean;
   onOpenWish?: (id: string) => void;
+  onOpen: () => void;
+  comparing: boolean;
+  onToggleCompare: () => void;
 }
 
 function Tags({ tags, hits }: { tags: readonly Want[]; hits: readonly Want[] }) {
@@ -25,7 +28,22 @@ function Tags({ tags, hits }: { tags: readonly Want[]; hits: readonly Want[] }) 
   );
 }
 
-export function ResultCard({ result: r, rank, criteria, onAdd, adding, onOpenWish }: Props) {
+export function ProsCons({ result, criteria }: { result: Result; criteria: Criteria }) {
+  const { pros, cons } = prosCons(result, criteria);
+  return (
+    <ul className="pc">
+      {pros.map((p) => <li key={p} className="pro"><span aria-label="Point fort">+</span>{p}</li>)}
+      {cons.map((c) => <li key={c} className="con"><span aria-label="Point faible">−</span>{c}</li>)}
+    </ul>
+  );
+}
+
+const stop = (fn: () => void) => (e: React.MouseEvent) => {
+  e.stopPropagation();
+  fn();
+};
+
+export function ResultCard({ result: r, rank, criteria, onAdd, adding, onOpenWish, onOpen, comparing, onToggleCompare }: Props) {
   const wish = r.kind === "destination" ? r.wish : r.wish;
   const trip = r.kind === "destination" ? r.trip : undefined;
   const tags = r.kind === "destination" ? r.destination.wants : r.wants;
@@ -35,7 +53,7 @@ export function ResultCard({ result: r, rank, criteria, onAdd, adding, onOpenWis
   const flag = wish ? `Sur ta liste${wish.priority ? ` · ${wish.priority}` : ""}` : trip ? `Déjà fait en ${trip.start?.slice(0, 4) ?? "?"}` : null;
 
   return (
-    <article className="card">
+    <article className={`card${comparing ? " picked" : ""}`} onClick={onOpen}>
       <div className="sky" style={{ "--sky": skyGradient(tags[0]) } as React.CSSProperties}>
         {flag ? <span className="flag">{flag}</span> : <span className="rank">n° {rank}</span>}
         <span className="score" aria-label={`Score ${r.score} sur 100`}>
@@ -50,7 +68,7 @@ export function ResultCard({ result: r, rank, criteria, onAdd, adding, onOpenWis
             {r.kind === "destination" ? (
               <>
                 <span className="mono">CDG → {r.destination.airport}</span> · {flightTime(r.destination.flightHours)}{" "}
-                {r.destination.direct ? "sans escale" : "avec escale"}
+                {r.direct ? "sans escale" : "avec escale"}
               </>
             ) : (
               r.wish.country || "Sur ta liste d'envies"
@@ -72,17 +90,24 @@ export function ResultCard({ result: r, rank, criteria, onAdd, adding, onOpenWis
             r.idealDays != null && <span>Idéal : <b>{r.idealDays} j</b></span>
           )}
         </div>
-        <SeasonDots season={season} month={criteria.month} />
+        <SeasonDots season={season} months={criteria.months} />
+        {highlight(r) && <p className="highlight">{highlight(r)}</p>}
         <Tags tags={tags} hits={r.hits} />
-        <p className="why">{explain(r, criteria)}</p>
-        {r.kind === "destination" && !wish && onAdd && (
-          <button className="btn" onClick={onAdd} disabled={adding}>
-            {adding ? "Ajout…" : "Ajouter à mes envies"}
+        <ProsCons result={r} criteria={criteria} />
+        <div className="card-actions">
+          {r.kind === "destination" && !wish && onAdd && (
+            <button className="btn" onClick={stop(onAdd)} disabled={adding}>
+              {adding ? "Ajout…" : "Ajouter à mes envies"}
+            </button>
+          )}
+          {wish && onOpenWish && (
+            <button className="btn ghost" onClick={stop(() => onOpenWish(wish.id))}>Voir l'envie</button>
+          )}
+          <button className={`btn cmp-toggle${comparing ? " on" : ""}`} aria-pressed={comparing} onClick={stop(onToggleCompare)}>
+            {comparing ? "✓ Comparer" : "+ Comparer"}
           </button>
-        )}
-        {wish && onOpenWish && (
-          <button className="btn ghost" onClick={() => onOpenWish(wish.id)}>Voir dans mes envies</button>
-        )}
+        </div>
+        <span className="more-hint">Toucher pour le détail du score</span>
       </div>
     </article>
   );
