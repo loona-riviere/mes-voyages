@@ -83,7 +83,7 @@ export function App() {
             </div>
           )}
           {tab === "choose" && <Choose criteria={criteria} setCriteria={setCriteria} notion={notion} toast={toast} onOpenWish={(id) => { go("wishes"); openWish(id); }} />}
-          {tab === "wishes" && <Wishes notion={notion} filter={filter} onOpen={openWish} />}
+          {tab === "wishes" && <Wishes notion={notion} filter={filter} setFilter={setFilter} onOpen={openWish} />}
           {tab === "trips" && <Trips notion={notion} />}
         </main>
       </div>

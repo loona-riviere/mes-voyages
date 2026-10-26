@@ -7,23 +7,36 @@ import type { NotionData } from "../lib/useNotion";
 
 export interface WishFilter {
   kids: Kids | null;
-  priority: Priority | null;
+  /** "none" = envies sans priorité */
+  priority: Priority | "none" | null;
   month: number;
 }
 export const NO_FILTER: WishFilter = { kids: null, priority: null, month: -1 };
+export const isFiltered = (f: WishFilter) => f.kids !== null || f.priority !== null || f.month >= 0;
+
+export function matchesFilter(w: Wish, f: WishFilter): boolean {
+  if (f.kids && w.kids !== f.kids) return false;
+  if (f.priority === "none" ? w.priority !== null : f.priority && w.priority !== f.priority) return false;
+  return f.month < 0 || w.bestMonths.includes(f.month);
+}
 
 const prioClass = (p: Priority | null) => `prio p${p ? PRIORITIES.indexOf(p) : 2}`;
 
 export function WishesHeader({ filter: f, setFilter }: { filter: WishFilter; setFilter: (f: WishFilter) => void }) {
-  const flip = <K extends keyof WishFilter>(k: K, v: WishFilter[K]) => setFilter({ ...f, [k]: f[k] === v ? NO_FILTER[k] : v });
   return (
     <div className="row-scroll" aria-label="Filtres">
-      {(["Avec enfants", "Sans enfants"] as const).map((k) => (
-        <button key={k} className={`pill${f.kids === k ? " on" : ""}`} aria-pressed={f.kids === k} onClick={() => flip("kids", k)}>{k}</button>
-      ))}
-      {PRIORITIES.map((p) => (
-        <button key={p} className={`pill${f.priority === p ? " on" : ""}`} aria-pressed={f.priority === p} onClick={() => flip("priority", p)}>{p}</button>
-      ))}
+      <select className={`pill${f.priority ? " on" : ""}`} aria-label="Priorité" value={f.priority ?? ""}
+        onChange={(e) => setFilter({ ...f, priority: (e.target.value || null) as WishFilter["priority"] })}>
+        <option value="">Toutes les priorités</option>
+        {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+        <option value="none">Sans priorité</option>
+      </select>
+      <select className={`pill${f.kids ? " on" : ""}`} aria-label="Enfants" value={f.kids ?? ""}
+        onChange={(e) => setFilter({ ...f, kids: (e.target.value || null) as Kids | null })}>
+        <option value="">Avec ou sans enfants</option>
+        <option value="Sans enfants">À faire sans enfants</option>
+        <option value="Avec enfants">Avec enfants</option>
+      </select>
       <select className={`pill${f.month >= 0 ? " on" : ""}`} aria-label="Mois" value={f.month} onChange={(e) => setFilter({ ...f, month: Number(e.target.value) })}>
         <option value={-1}>Tous les mois</option>
         {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
@@ -40,17 +53,24 @@ function MonthBar({ months, sel }: { months: number[]; sel?: number }) {
   );
 }
 
-export function Wishes({ notion, filter, onOpen }: { notion: NotionData; filter: WishFilter; onOpen: (id: string) => void }) {
+export function Wishes({ notion, filter, setFilter, onOpen }: {
+  notion: NotionData; filter: WishFilter; setFilter: (f: WishFilter) => void; onOpen: (id: string) => void;
+}) {
   const list = useMemo(
     () =>
       notion.wishes
-        .filter((w) => (!filter.kids || w.kids === filter.kids) && (!filter.priority || w.priority === filter.priority) && (filter.month < 0 || w.bestMonths.includes(filter.month)))
+        .filter((w) => matchesFilter(w, filter))
         .sort((a, b) => (a.priority ? PRIORITIES.indexOf(a.priority) : 3) - (b.priority ? PRIORITIES.indexOf(b.priority) : 3) || a.name.localeCompare(b.name, "fr")),
     [notion.wishes, filter],
   );
   return (
     <div className="screen">
-      <div className="sum"><b>{list.length} envie{list.length > 1 ? "s" : ""}</b><span>sur {notion.wishes.length}</span></div>
+      <div className="sum">
+        <b>{list.length} envie{list.length > 1 ? "s" : ""}</b>
+        {isFiltered(filter)
+          ? <button className="reset" onClick={() => setFilter(NO_FILTER)}>Effacer les filtres ({notion.wishes.length - list.length} masquées)</button>
+          : <span>toutes tes envies</span>}
+      </div>
       {notion.wishes.length === 0 && notion.state === "loading" && <div className="empty">Chargement de tes envies…</div>}
       {notion.wishes.length > 0 && list.length === 0 && <div className="empty">Aucune envie ne correspond à ces filtres.</div>}
       {notion.wishes.length === 0 && notion.state === "ok" && (

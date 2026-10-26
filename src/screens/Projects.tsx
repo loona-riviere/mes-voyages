@@ -46,7 +46,7 @@ export function ProjectsRow({ projects, criteria, onApply, onEdit, onNew }: {
         const active = isActive(p, criteria);
         return (
           <button key={p.id} className={`project${active ? " on" : ""}`} aria-pressed={active} onClick={() => (active ? onEdit(p) : onApply(p))}>
-            {p.name}
+            {p.status === "Choisi" && <span aria-label="Choisi">✓ </span>}{p.name}
           </button>
         );
       })}
