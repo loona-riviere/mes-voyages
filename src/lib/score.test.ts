@@ -206,7 +206,7 @@ describe("explain", () => {
   it("résume saison, budget et durée", () => {
     const r = scoreDestination(dest("Patagonie"), { ...neutral, days: 8, budget: 1000 });
     expect(explain(r, { ...neutral, days: 8, budget: 1000 }).replace(/\s/g, " ")).toBe(
-      "Mauvaise saison en mai, dépasse le budget d'environ 1 500 €, un peu loin pour 8 jours (12 conseillés).",
+      "Mauvaise saison en mai, dépasse le budget d'environ 1 600 €, un peu loin pour 8 jours (12 conseillés).",
     );
   });
 });

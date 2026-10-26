@@ -36,5 +36,14 @@ Les chiffres du catalogue sont des estimations pour un départ de Paris. À rev�
 ## Classements
 - [Lonely Planet Best in Travel 2026](https://www.globeaware.org/news/globe-aware-news/2170-the-best-places-to-travel-in-2026-according-to-lonely-planet), [Routard top 10 Europe 2027](https://www.routard.com/fr/mag/dossier/a/ou-partir-en-2027-top-10-des-meilleures-destinations-en-europe)
 
-## À revérifier
-Lignes marquées « Prototype d'origine (non vérifié) » dans Notion (Sicile, Écosse, Botswana, Afrique du Sud, Yucatán, Patagonie) et vols marqués « estimé » ou « à vérifier ».
+## Lignes revérifiées (octobre 2026)
+- Sicile : [Où et quand](https://www.ou-et-quand.net/budget/sicile/), [Nomadotravel](https://www.nomadotravel.app/fr/guides/sicily-on-a-budget), [Partir.com](https://www.partir.com/Sicile/cout-de-la-vie.html)
+- Écosse : [Generation Voyage](https://generationvoyage.fr/?p=384461), [forum Routard](https://www.routard.com/forums/t/road-trip-ecosse-juin-2026/486226)
+- Botswana : [Okavango Delta Tours](https://okavangodeltabotswanatours.com/guides/okavango-delta-safari-cost), [Swahili Paradise](https://www.swahiliparadisetours.net/botswana-safaris-cost-2026)
+- Afrique du Sud : [Partir.com](https://www.partir.com/Afrique-du-sud/cout-de-la-vie.html), [Le Mag Voyage](https://www.lemagvoyage.fr/afrique-du-sud/voyage-afrique-du-sud-budget-safari-voiture-hotels-activites/)
+- Yucatán : [Où et quand Mérida](https://www.ou-et-quand.net/budget/mexique/merida-yucatan/), [Où et quand Tulum](https://www.ou-et-quand.net/budget/mexique/tulum/), [HowIsTheSargassum](https://www.howisthesargassum.com/blog/sargassum-2026-forecast)
+- Patagonie : [Tourlane](https://www.tourlane.fr/amerique-du-sud/argentine/budget-voyage-patagonie/), [Destination de voyage](https://www.destination-de-voyage.com/amerique-latine/argentine/patagonie/)
+- Vols directs : [Partir.com Vancouver](https://www.partir.com/Canada/billet-avion-vol/paris-cdg-vancouver/cdg/yvr/vol-direct.html), [Air France Bogotá](https://wwws.airfrance.fr/fr-fr/vols-de-paris-a-bogota), [Partir.com Tirana](https://www.partir.com/Albanie/billet-avion-vol/paris-orly-tirana/ory/tia/vol-direct.html), [Où et quand Oulan-Bator](https://www.ou-et-quand.net/vols/mongolie/oulan-bator/)
+
+## Encore estimés
+Prix de vol pour Atacama & Uyuni, Fjords de Norvège, Cappadoce & Lycie, Andalousie, Sardaigne, Slovénie, Botswana et Ouganda (marqués « estimé » dans Notion). Vols directs non confirmés pour Ljubljana et Cagliari : comptés avec escale.

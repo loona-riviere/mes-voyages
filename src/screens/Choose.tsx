@@ -40,7 +40,8 @@ export function ChooseHeader({ criteria: c, setCriteria, openCriteria }: Pick<Pr
           {c.rules.length ? <>Contraintes <span className="n">{c.rules.length}</span></> : "Sans contrainte"}
         </button>
       </div>
-      <div className="row-scroll" aria-label="Départs rapides">
+      <div className="row-scroll" aria-label="Raccourcis">
+        <span className="presets-lbl">Raccourcis</span>
         {PRESETS.map((p) => (
           <button key={p.name} className="preset" onClick={() => setCriteria({ months: p.months, days: p.days, budget: p.budget, wants: p.wants, rules: p.rules })}>
             {p.name}
