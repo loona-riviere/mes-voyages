@@ -208,7 +208,7 @@ export function rank(
   const withKids = c.rules.includes("kids");
   const wishes = notion.wishes
     .filter((w) => wishFits(w, withKids))
-    .map((w) => ({ w, dest: matchCatalogue(w.name, catalogue) }));
+    .map((w) => ({ w, dest: matchCatalogue(w.name, catalogue, w.country) }));
 
   const kept = catalogue.filter((d) => !(c.rules.includes("direct") && !isDirect(d, c.months)));
   const fromCatalogue = kept.map((d) =>

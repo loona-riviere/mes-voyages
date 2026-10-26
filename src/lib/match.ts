@@ -6,11 +6,18 @@ export function norm(s: string | null | undefined): string {
   return String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 }
 
-/** Destination du catalogue dont le nom apparaît dans le nom d'une envie (« Safari en Namibie » → Namibie). */
-export function matchCatalogue(name: string, catalogue: readonly Destination[]): Destination | undefined {
+/**
+ * Destination du catalogue d'une envie : d'abord par le nom (« Safari en Namibie » → Namibie),
+ * sinon par le pays quand une seule destination du catalogue s'y trouve (« Mexique » → Yucatán).
+ */
+export function matchCatalogue(name: string, catalogue: readonly Destination[], country?: string): Destination | undefined {
   const t = norm(name);
-  if (!t) return undefined;
-  return catalogue.find((d) => t.includes(norm(d.name).replace(/^la /, "")));
+  const byName = t ? catalogue.find((d) => t.includes(norm(d.name).replace(/^la /, ""))) : undefined;
+  if (byName) return byName;
+  const c = norm(country) || t;
+  if (!c) return undefined;
+  const sameCountry = catalogue.filter((d) => norm(d.country) === c);
+  return sameCountry.length === 1 ? sameCountry[0] : undefined;
 }
 
 /** Voyage déjà fait correspondant à une destination, le plus récent d'abord. */

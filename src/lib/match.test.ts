@@ -18,6 +18,13 @@ describe("match", () => {
     expect(matchCatalogue("Mongolie", CATALOGUE)).toBeUndefined();
   });
 
+  it("se rabat sur le pays quand une seule destination s'y trouve", () => {
+    expect(matchCatalogue("Mexique", CATALOGUE, "Mexique")?.name).toBe("Yucatán");
+    expect(matchCatalogue("Maroc", CATALOGUE, "Maroc")?.name).toBe("Marrakech");
+    expect(matchCatalogue("Road trip", CATALOGUE, "Portugal")).toBeUndefined();
+    expect(matchCatalogue("Chili Bolivie", CATALOGUE, "Chili & Bolivie")).toBeUndefined();
+  });
+
   it("prend le voyage visité le plus récent", () => {
     const japon = CATALOGUE.find((d) => d.name === "Japon")!;
     const trips = [trip("Japon", "2019-04-01"), trip("Japon", "2024-10-01"), trip("Japon", "2027-04-01", "À planifier")];
