@@ -111,7 +111,7 @@ export function Choose({ criteria, notion, toast, onOpenWish }: Props) {
     const d = r.destination;
     setAdding(d.airport);
     try {
-      await notion.addWish({
+      const sent = await notion.addWish({
         name: d.name,
         country: d.country,
         wants: d.wants.map((w) => WANT_LABEL[w]),
@@ -122,7 +122,7 @@ export function Choose({ criteria, notion, toast, onOpenWish }: Props) {
         status: "Idée",
         notes: d.pitch,
       });
-      toast(`${d.name} ajouté à tes envies`);
+      toast(sent ? `${d.name} ajouté à tes envies` : `${d.name} ajouté, envoyé à Notion au retour du réseau`);
     } catch (e) {
       toast(e instanceof Error ? e.message : "Ajout impossible");
     } finally {
@@ -145,7 +145,7 @@ export function Choose({ criteria, notion, toast, onOpenWish }: Props) {
           rank={i + 1}
           criteria={criteria}
           adding={r.kind === "destination" && adding === r.destination.airport}
-          onAdd={notion.state === "ok" && r.kind === "destination" ? () => add(r) : undefined}
+          onAdd={r.kind === "destination" ? () => add(r) : undefined}
           onOpenWish={onOpenWish}
         />
       ))}

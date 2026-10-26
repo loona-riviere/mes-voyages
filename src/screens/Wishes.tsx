@@ -98,8 +98,8 @@ export function WishSheet({ wish, onClose, notion, toast }: { wish: Wish | null;
   const save = async (patch: WishPatch) => {
     if (!w) return;
     try {
-      await notion.patchWish(w.id, patch);
-      toast("Enregistré dans Notion");
+      const sent = await notion.patchWish(w.id, patch);
+      toast(sent ? "Enregistré dans Notion" : "Enregistré, envoyé à Notion au retour du réseau");
     } catch (e) {
       toast(e instanceof Error ? e.message : "Modification impossible");
     }

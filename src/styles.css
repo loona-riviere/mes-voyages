@@ -45,6 +45,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .head h1 { margin: 0; font: 400 31px/1.05 var(--display); }
 .sync { border: 0; font: 600 12px var(--body); color: var(--accent-ink); background: var(--accent-soft); padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
 .sync.bad { background: var(--s0); color: var(--over); }
+.sync.off { background: var(--s0); color: var(--muted); }
 .row-scroll {
   display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
   margin: 0 calc(-1 * var(--gutter-r)) 0 calc(-1 * var(--gutter-l)); padding: 0 var(--gutter-r) 0 var(--gutter-l);
@@ -71,17 +72,17 @@ main { padding: 4px var(--gutter-r) 24px var(--gutter-l); }
 
 /* ---------- Carte de résultat ---------- */
 .card { background: var(--surface); border-radius: 22px; overflow: hidden; box-shadow: var(--shadow); }
-.sky { height: 74px; position: relative; padding: 12px 14px; display: flex; justify-content: space-between; align-items: flex-start; isolation: isolate; }
+.sky { height: 96px; position: relative; padding: 12px 14px; display: flex; justify-content: space-between; align-items: flex-start; isolation: isolate; }
 .sky::before { content: ""; position: absolute; inset: 0; background: var(--sky); z-index: -1; }
 .sky::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 20px; background:
     radial-gradient(120% 100% at 30% 100%, var(--surface) 48%, transparent 50%),
     radial-gradient(90% 100% at 85% 100%, var(--surface) 46%, transparent 48%);
 }
-@media (prefers-color-scheme: dark) { .sky::before, .unlock-sky { filter: brightness(.62) saturate(.85); } }
+@media (prefers-color-scheme: dark) { .sky::before, .unlock-sky { filter: brightness(.78) saturate(1.1); } }
 .flag, .rank { position: relative; z-index: 1; font: 600 11.5px var(--body); padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, .88); color: #2A2010; }
 .rank { background: rgba(255, 255, 255, .55); }
-.score { position: relative; z-index: 1; background: var(--surface); color: var(--ink); border-radius: 14px; padding: 6px 10px 5px; display: grid; justify-items: center; line-height: 1; min-width: 54px; }
+.score { position: relative; z-index: 1; background: var(--surface); color: var(--ink); border-radius: 14px; padding: 6px 10px 5px; box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .35); display: grid; justify-items: center; line-height: 1; min-width: 54px; }
 .score b { font: 400 24px var(--display); }
 .score small { font: 600 9px var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 3px; }
 .card-in { padding: 4px 16px 16px; display: grid; gap: 12px; }

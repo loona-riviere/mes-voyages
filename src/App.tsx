@@ -39,9 +39,11 @@ export function App() {
 
   if (notion.state === "locked") return <Unlock onUnlock={notion.unlock} error={notion.error} />;
 
+  const waiting = notion.pending ? ` · ${notion.pending} en attente` : "";
   const sync =
     notion.state === "loading" ? "Mise à jour…" :
-    notion.state === "error" ? "Hors ligne · réessayer" :
+    notion.state === "offline" ? `Hors ligne${waiting}` :
+    notion.state === "error" ? "Erreur · réessayer" :
     notion.updatedAt ? `À jour ${ago(notion.updatedAt)}` : "À jour";
 
   return (
@@ -50,7 +52,7 @@ export function App() {
         <header className={`head${scrolled ? " scrolled" : ""}`}>
           <div className="title-row">
             <h1>{TITLES[tab]}</h1>
-            <button className={`sync${notion.state === "error" ? " bad" : ""}`} onClick={() => void notion.refresh()} disabled={notion.state === "loading"}
+            <button className={`sync${notion.state === "error" ? " bad" : notion.state === "offline" ? " off" : ""}`} onClick={() => void notion.refresh()} disabled={notion.state === "loading"}
               title={notion.error ?? undefined}>
               {sync}
             </button>
@@ -60,6 +62,13 @@ export function App() {
         </header>
         <main>
           {notion.state === "error" && notion.error && <div className="banner">{notion.error}</div>}
+          {notion.state === "offline" && (
+            <div className="banner">
+              Pas de réseau : tu vois les données du {notion.updatedAt ? new Date(notion.updatedAt).toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) : "dernier chargement"}.
+              {notion.pending === 1 && " 1 changement partira vers Notion au retour du réseau."}
+              {notion.pending > 1 && ` ${notion.pending} changements partiront vers Notion au retour du réseau.`}
+            </div>
+          )}
           {tab === "choose" && <Choose criteria={criteria} setCriteria={setCriteria} notion={notion} toast={toast} onOpenWish={(id) => { go("wishes"); openWish(id); }} />}
           {tab === "wishes" && <Wishes notion={notion} filter={filter} onOpen={openWish} />}
           {tab === "trips" && <Trips notion={notion} />}
