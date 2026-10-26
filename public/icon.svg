@@ -1,7 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#141A33"/>
-  <circle cx="256" cy="256" r="150" fill="none" stroke="#2F6BDB" stroke-width="18" stroke-dasharray="4 26"/>
-  <path d="M256 120 L300 256 L256 392 L212 256 Z" fill="#E9ECF7"/>
-  <path d="M256 120 L300 256 L212 256 Z" fill="#FF5A1F"/>
-  <circle cx="256" cy="256" r="16" fill="#141A33"/>
+  <defs>
+    <linearGradient id="ciel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F6D9A4"/>
+      <stop offset=".62" stop-color="#E89C6A"/>
+      <stop offset="1" stop-color="#9C6FA8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#ciel)"/>
+  <circle cx="256" cy="300" r="92" fill="#FBFCF8"/>
+  <path d="M0 340 C 110 300, 190 372, 300 336 S 450 300, 512 330 V 512 H 0 Z" fill="#3846B0"/>
+  <path d="M0 400 C 120 372, 220 430, 330 400 S 460 380, 512 396 V 512 H 0 Z" fill="#1D2620"/>
 </svg>
