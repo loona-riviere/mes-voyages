@@ -4,10 +4,18 @@ App perso pour choisir où partir, gérer nos envies de voyage et revoir nos voy
 Interface en français, pensée pour l'iPhone et installable sur l'écran d'accueil.
 
 - **Front** : Vite, React, TypeScript, `vite-plugin-pwa`
-- **Données** : Notion (bases « Destinations », « Envies de voyage » et « Catalogue »), lues et modifiées par des Netlify Functions
+- **Données** : Notion (bases « Destinations », « Envies de voyage », « Catalogue » et « Projets »), lues et modifiées par des Netlify Functions
 - **Hébergement** : Netlify
 
-Le token Notion reste côté serveur. Le navigateur ne parle qu'aux fonctions `/api/voyages`, `/api/envies` et `/api/catalogue`, protégées par une phrase secrète.
+Le token Notion reste côté serveur. Le navigateur ne parle qu'aux fonctions `/api/voyages`, `/api/envies`, `/api/catalogue` et `/api/projets`, protégées par une phrase secrète.
+
+### Les projets
+
+La base **Projets** garde les voyages en cours de choix (« Voyage de mai », « Safari »…) : mois, durée, budget, envies, contraintes. Ils s'affichent en haut de l'onglet Choisir :
+
+- toucher un projet remplit les critères (les colonnes vides gardent les critères en cours) ;
+- le retoucher quand il est actif permet de le mettre à jour avec les critères du moment ou de l'archiver ;
+- « + Projet » enregistre les critères en cours sous un nouveau nom.
 
 ### Le catalogue
 
@@ -80,7 +88,7 @@ src/lib/score.ts          score sur 100 (fonction pure, testée)
 src/lib/match.ts          rapprochement catalogue ↔ envies et voyages Notion
 src/shared/types.ts       formes échangées entre les fonctions et l'app
 netlify/lib/notion.ts     appels à l'API Notion (version 2026-03-11, data sources)
-netlify/functions/        voyages.ts (GET), envies.ts (GET, POST, PATCH), catalogue.ts (GET)
+netlify/functions/        voyages.ts (GET), envies.ts (GET, POST, PATCH), catalogue.ts (GET), projets.ts (GET, POST, PATCH)
 prototype/                prototype d'origine et directions visuelles
 ```
 

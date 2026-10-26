@@ -1,4 +1,5 @@
 // Formes renvoyées par les Netlify Functions, partagées avec l'app.
+import type { Rule, Want } from "../data/catalogue";
 
 export type Priority = "Très envie" | "Envie" | "Un jour";
 export type WishStatus = "Idée" | "En réflexion" | "Planifié";
@@ -54,6 +55,34 @@ export interface NewWish {
   notes?: string;
   /** Page du catalogue à relier (propriété « Destination ») */
   destinationId?: string | null;
+}
+
+export type ProjectStatus = "À choisir" | "Choisi" | "Archivé";
+
+/** Projet de voyage en cours de choix : des critères enregistrés dans Notion. */
+export interface Project {
+  id: string;
+  url: string;
+  name: string;
+  /** Index de mois, 0 = janvier ; vide = garder les mois en cours */
+  months: number[];
+  /** null = garder la valeur en cours */
+  days: number | null;
+  budget: number | null;
+  wants: Want[];
+  rules: Rule[];
+  status: ProjectStatus | null;
+  notes: string;
+}
+
+export interface ProjectInput {
+  name?: string;
+  months?: number[];
+  days?: number | null;
+  budget?: number | null;
+  wants?: Want[];
+  rules?: Rule[];
+  status?: ProjectStatus;
 }
 
 export interface WishPatch {

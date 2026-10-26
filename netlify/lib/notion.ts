@@ -1,6 +1,7 @@
-import { MONTHS, WANT_FROM_LABEL, WANTS, type Destination, type Level, type Want } from "../../src/data/catalogue";
+import { MONTHS, RULES, WANT_FROM_LABEL, WANT_LABEL, WANTS, type Destination, type Level, type Rule, type Want } from "../../src/data/catalogue";
 import {
   PRIORITIES, WISH_STATUSES,
+  type Project, type ProjectInput, type ProjectStatus,
   type Kids, type NewWish, type Priority, type Trip, type TripStatus, type Wish, type WishPatch, type WishStatus,
 } from "../../src/shared/types";
 
@@ -8,6 +9,7 @@ export const NOTION_VERSION = "2026-03-11";
 export const TRIPS_DATA_SOURCE = "8195c0cd-68d2-408e-afce-409b3f113982";
 export const WISHES_DATA_SOURCE = "f84d6097-98c1-4b04-8fa9-bb7bcd36b7a4";
 export const CATALOGUE_DATA_SOURCE = "9a6e6864-ed0d-44b8-8846-663a6b5b8dca";
+export const PROJECTS_DATA_SOURCE = "11a1b63f-f92b-4607-aa33-d9781e11ff1f";
 
 const WANT_LABELS: readonly string[] = WANTS.map((w) => w.label);
 const KIDS: readonly Kids[] = ["Sans enfants", "Avec enfants"];
@@ -288,6 +290,55 @@ export function patchProperties(patch: WishPatch): Record<string, unknown> {
   const props: Record<string, unknown> = {};
   if (patch.priority !== undefined) props["Priorité"] = sel(check<Priority>(PRIORITIES, patch.priority, "Priorité"));
   if (patch.status !== undefined) props["Statut"] = sel(check<WishStatus>(WISH_STATUSES, patch.status, "Statut"));
+  if (!Object.keys(props).length) throw new InvalidInput("Rien à modifier");
+  return props;
+}
+
+// ---------- Projets ----------
+
+const PROJECT_STATUSES: readonly ProjectStatus[] = ["À choisir", "Choisi", "Archivé"];
+// Libellés Notion des contraintes (base « Projets »)
+const RULE_LABEL: Record<Rule, string> = { noBeach: "Pas de plage", direct: "Vol direct uniquement", calm: "Peu de monde", kids: "Avec enfants" };
+const RULE_FROM_LABEL = Object.fromEntries(Object.entries(RULE_LABEL).map(([k, l]) => [l, k])) as Record<string, Rule | undefined>;
+const RULE_KEYS: readonly string[] = RULES.map((r) => r.key);
+const WANT_KEYS: readonly string[] = WANTS.map((w) => w.key);
+
+export function toProject(p: Page): Project {
+  return {
+    id: p.id,
+    url: p.url,
+    name: text(p, "Nom"),
+    months: monthIndexes(options(p, "Mois")),
+    days: num(p, "Durée (jours)"),
+    budget: num(p, "Budget / pers"),
+    wants: options(p, "Envies").map((l) => WANT_FROM_LABEL[l]).filter((w): w is Want => !!w),
+    rules: options(p, "Contraintes").map((l) => RULE_FROM_LABEL[l]).filter((r): r is Rule => !!r),
+    status: oneOf(PROJECT_STATUSES, option(p, "Statut")),
+    notes: text(p, "Notes"),
+  };
+}
+
+/** Propriétés Notion d'un projet, création ou mise à jour (seuls les champs fournis). */
+export function projectProperties(input: ProjectInput, creating: boolean): Record<string, unknown> {
+  const props: Record<string, unknown> = {};
+  if (input.name !== undefined || creating) {
+    const name = typeof input.name === "string" ? input.name.trim() : "";
+    if (!name) throw new InvalidInput("Nom manquant");
+    props["Nom"] = { title: rich(name) };
+  }
+  if (input.months !== undefined) {
+    props["Mois"] = {
+      multi_select: input.months.map((i) => {
+        if (!Number.isInteger(i) || i < 0 || i > 11) throw new InvalidInput("Mois invalide");
+        return { name: MONTHS[i] };
+      }),
+    };
+  }
+  if (input.days !== undefined) props["Durée (jours)"] = { number: positive(input.days, "Durée") };
+  if (input.budget !== undefined) props["Budget / pers"] = { number: positive(input.budget, "Budget") };
+  if (input.wants !== undefined) props["Envies"] = { multi_select: input.wants.map((w) => ({ name: WANT_LABEL[check(WANT_KEYS as readonly Want[], w, "Envies")] })) };
+  if (input.rules !== undefined) props["Contraintes"] = { multi_select: input.rules.map((r) => ({ name: RULE_LABEL[check(RULE_KEYS as readonly Rule[], r, "Contraintes")] })) };
+  if (input.status !== undefined || creating) props["Statut"] = sel(check(PROJECT_STATUSES, input.status ?? "À choisir", "Statut"));
   if (!Object.keys(props).length) throw new InvalidInput("Rien à modifier");
   return props;
 }

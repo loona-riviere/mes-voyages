@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newWishProperties, num, parseHighlights, patchProperties, toDestination, toTrip, toWish, type Page } from "./notion";
+import { newWishProperties, num, parseHighlights, patchProperties, projectProperties, toDestination, toProject, toTrip, toWish, type Page } from "./notion";
 
 const rt = (s: string) => [{ plain_text: s }];
 
@@ -131,5 +131,38 @@ describe("catalogue Notion", () => {
     expect(d).toMatchObject({ flightPrice: 800, dailyBudget: 120, crowd: 1, malaria: false, wants: [] });
     expect(toDestination({ id: "y", url: "", properties: {} })).toBeNull();
     expect(parseHighlights("")).toBeUndefined();
+  });
+});
+
+describe("projets", () => {
+  it("lit un projet, colonnes vides comprises", () => {
+    const p = toProject({
+      id: "p1", url: "u",
+      properties: {
+        "Nom": { type: "title", title: rt("Safari") },
+        "Mois": { type: "multi_select", multi_select: [{ name: "Octobre" }, { name: "Septembre" }] },
+        "Durée (jours)": { type: "number", number: 15 },
+        "Budget / pers": { type: "number", number: null },
+        "Envies": { type: "multi_select", multi_select: [{ name: "Faune sauvage" }] },
+        "Contraintes": { type: "multi_select", multi_select: [{ name: "Pas de plage" }, { name: "Peu de monde" }] },
+        "Statut": { type: "select", select: { name: "À choisir" } },
+      },
+    });
+    expect(p).toMatchObject({ name: "Safari", months: [8, 9], days: 15, budget: null, wants: ["faune"], rules: ["noBeach", "calm"], status: "À choisir" });
+  });
+
+  it("écrit les critères avec les libellés Notion", () => {
+    const props = projectProperties({ name: "Mai", months: [4], days: 12, budget: null, wants: ["culture"], rules: ["direct"] }, true);
+    expect(props["Mois"]).toEqual({ multi_select: [{ name: "Mai" }] });
+    expect(props["Budget / pers"]).toEqual({ number: null });
+    expect(props["Envies"]).toEqual({ multi_select: [{ name: "Culture & histoire" }] });
+    expect(props["Contraintes"]).toEqual({ multi_select: [{ name: "Vol direct uniquement" }] });
+    expect(props["Statut"]).toEqual({ select: { name: "À choisir" } });
+  });
+
+  it("n'écrit que ce qui change et refuse l'inconnu", () => {
+    expect(projectProperties({ status: "Archivé" }, false)).toEqual({ "Statut": { select: { name: "Archivé" } } });
+    expect(() => projectProperties({}, true)).toThrow("Nom manquant");
+    expect(() => projectProperties({ wants: ["shopping" as never] }, false)).toThrow("Envies invalide");
   });
 });

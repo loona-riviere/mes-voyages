@@ -9,6 +9,7 @@ import { Choose, ChooseHeader, CriteriaSheet } from "./screens/Choose";
 import { Trips } from "./screens/Trips";
 import { Unlock } from "./screens/Unlock";
 import { NO_FILTER, Wishes, WishesHeader, WishSheet, type WishFilter } from "./screens/Wishes";
+import { applyProject, ProjectSheet, ProjectsRow, type ProjectSheetState } from "./screens/Projects";
 
 const TITLES: Record<Tab, string> = { choose: "Où partir ?", wishes: "Envies", trips: "Voyages faits" };
 
@@ -20,6 +21,7 @@ export function App() {
   const [wishId, setWishId] = useState<string | null>(null);
   const [filter, setFilter] = useState<WishFilter>(NO_FILTER);
   const [scrolled, setScrolled] = useState(false);
+  const [projectSheet, setProjectSheet] = useState<ProjectSheetState>(null);
   const [toastNode, toast] = useToast();
 
   useEffect(() => {
@@ -57,7 +59,18 @@ export function App() {
               {sync}
             </button>
           </div>
-          {tab === "choose" && <ChooseHeader criteria={criteria} openCriteria={() => setCritOpen(true)} />}
+          {tab === "choose" && (
+            <>
+              <ProjectsRow
+                projects={notion.projects}
+                criteria={criteria}
+                onApply={(p) => { setCriteria(applyProject(p, criteria)); toast(p.name); }}
+                onEdit={(p) => setProjectSheet({ mode: "edit", id: p.id })}
+                onNew={() => setProjectSheet({ mode: "new" })}
+              />
+              <ChooseHeader criteria={criteria} openCriteria={() => setCritOpen(true)} />
+            </>
+          )}
           {tab === "wishes" && <WishesHeader filter={filter} setFilter={setFilter} />}
         </header>
         <main>
@@ -75,6 +88,7 @@ export function App() {
         </main>
       </div>
       <TabBar tab={tab} onChange={go} wishCount={notion.wishes.length} />
+      <ProjectSheet state={projectSheet} onClose={() => setProjectSheet(null)} criteria={criteria} notion={notion} toast={toast} />
       <CriteriaSheet open={critOpen} onClose={closeCrit} criteria={criteria} setCriteria={setCriteria} count={count} />
       <WishSheet wish={notion.wishes.find((w) => w.id === wishId) ?? null} onClose={closeWish} notion={notion} toast={toast} />
       {toastNode}
