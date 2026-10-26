@@ -1,0 +1,594 @@
+<title>Mes voyages · prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Young+Serif&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout : app iPhone à une colonne, en-tête collant, contenu qui défile, barre d'onglets fixée en bas, feuilles qui montent du bas */
+:root{
+  --bg:#EDF0F4; --surface:#FFFFFF; --bar:rgba(255,255,255,.9); --ink:#141A33; --muted:#5D6580; --line:#D5DAE4;
+  --accent:#FF5A1F; --on-accent:#FFFFFF; --accent-soft:#FFE6DB; --accent-ink:#B83A0C;
+  --sky:#2F6BDB; --s0:#DDE2EB; --s1:#9DB9EE; --s2:#2F6BDB; --over:#C2361B; --scrim:rgba(12,16,34,.45);
+  --display:"Schibsted Grotesk", system-ui, sans-serif; --body:"Instrument Sans", system-ui, -apple-system, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  --name-w:800; --name-ls:-.02em; --r:20px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0C1022; --surface:#161B33; --bar:rgba(22,27,51,.9); --ink:#E9ECF7; --muted:#959DBA; --line:#262D4B;
+  --accent:#FF7A45; --on-accent:#1A0B04; --accent-soft:#3A1E14; --accent-ink:#FFB08C;
+  --sky:#7FA6F5; --s0:#232A47; --s1:#3B5590; --s2:#7FA6F5; --over:#FF8A70; --scrim:rgba(0,0,0,.6); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C1022; --surface:#161B33; --bar:rgba(22,27,51,.9); --ink:#E9ECF7; --muted:#959DBA; --line:#262D4B;
+  --accent:#FF7A45; --on-accent:#1A0B04; --accent-soft:#3A1E14; --accent-ink:#FFB08C;
+  --sky:#7FA6F5; --s0:#232A47; --s1:#3B5590; --s2:#7FA6F5; --over:#FF8A70; --scrim:rgba(0,0,0,.6); color-scheme:dark}
+
+/* Style Lumière : surcharge des jetons */
+body.lumiere{
+  --bg:#EEF0EA; --surface:#FBFCF8; --bar:rgba(251,252,248,.9); --ink:#1D2620; --muted:#5F6B63; --line:#D7DCD2;
+  --accent:#3846B0; --on-accent:#FFFFFF; --accent-soft:#E2E5F7; --accent-ink:#2B378F;
+  --sky:#D9902A; --s0:#DFE3D9; --s1:#E9C77F; --s2:#D9902A; --over:#B4381F;
+  --display:"Young Serif", Georgia, serif; --body:"Figtree", system-ui, sans-serif; --name-w:400; --name-ls:0; --r:22px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) body.lumiere{
+  --bg:#141814; --surface:#1D231E; --bar:rgba(29,35,30,.9); --ink:#E9EDE5; --muted:#9CA79E; --line:#2D352E;
+  --accent:#9AA6F5; --on-accent:#141A3D; --accent-soft:#272D52; --accent-ink:#C3CAFA;
+  --sky:#F0BC57; --s0:#2A312B; --s1:#7A6331; --s2:#F0BC57; --over:#FF8A70}}
+:root[data-theme="dark"] body.lumiere{
+  --bg:#141814; --surface:#1D231E; --bar:rgba(29,35,30,.9); --ink:#E9EDE5; --muted:#9CA79E; --line:#2D352E;
+  --accent:#9AA6F5; --on-accent:#141A3D; --accent-soft:#272D52; --accent-ink:#C3CAFA;
+  --sky:#F0BC57; --s0:#2A312B; --s1:#7A6331; --s2:#F0BC57; --over:#FF8A70}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);overscroll-behavior-y:none;transition:background .25s}
+button{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono)}
+.app{max-width:520px;margin:0 auto;min-height:100%;padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+
+/* En-tête */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.head{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);
+  padding:12px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));display:grid;gap:10px;border-bottom:1px solid transparent;transition:border-color .2s}
+.head.scrolled{border-bottom-color:var(--line)}
+.proto{display:flex;align-items:center;gap:8px;font:600 11px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px}
+.seg button{border:0;background:none;padding:4px 10px;border-radius:999px;font:600 12px var(--body);color:var(--muted);text-transform:none;letter-spacing:0;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.title-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+h1{margin:0;font:var(--name-w) 30px/1.05 var(--display);letter-spacing:var(--name-ls)}
+.sync{font:600 11.5px var(--body);color:var(--accent-ink);background:var(--accent-soft);padding:4px 9px;border-radius:999px;white-space:nowrap}
+.row-scroll{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px))) 0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:0 max(16px,env(safe-area-inset-left,0px))}
+.row-scroll::-webkit-scrollbar{display:none}
+.pill{flex:none;font:600 13.5px var(--body);padding:8px 13px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);white-space:nowrap;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.pill.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.pill .n{font:700 11px var(--mono);background:var(--accent);color:var(--on-accent);border-radius:999px;padding:1px 6px}
+.preset{flex:none;font:500 13px var(--body);color:var(--muted);border:1px dashed var(--line);border-radius:999px;padding:5px 11px;background:none;white-space:nowrap;cursor:pointer}
+.preset:active{border-color:var(--accent);color:var(--accent-ink)}
+
+/* Contenu */
+main{padding:4px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.screen{display:grid;gap:12px}
+.screen[hidden]{display:none}
+.sum{display:flex;justify-content:space-between;align-items:baseline;gap:10px;color:var(--muted);font-size:13px;padding:6px 2px 0}
+.sum b{font:700 18px var(--display);color:var(--ink)}
+.note{font-size:12.5px;color:var(--muted);margin:4px 2px 0}
+.example{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border:1px dashed var(--line);border-radius:10px;padding:8px 10px;text-transform:none;letter-spacing:0;font-weight:500}
+
+/* Carte de résultat */
+.card{background:var(--surface);border-radius:var(--r);border:1px solid var(--line);overflow:hidden;display:grid}
+.card .sky{display:none;height:64px;position:relative;padding:10px 14px;justify-content:space-between;align-items:flex-start}
+.card .sky::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:18px;background:
+  radial-gradient(120% 100% at 30% 100%,var(--surface) 48%,transparent 50%),radial-gradient(90% 100% at 85% 100%,var(--surface) 46%,transparent 48%)}
+.card .sky .badge{position:relative;z-index:1;background:rgba(255,255,255,.88);color:#2A2010}
+.card .sky .sc{position:relative;z-index:1;background:var(--surface);border-radius:12px;padding:5px 9px 4px;display:grid;justify-items:center;line-height:1}
+.card .sky .sc b{font:var(--name-w) 21px var(--display)}
+.card .sky .sc small{font:600 8.5px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:2px}
+.card .in{padding:16px;display:grid;gap:13px}
+.hd{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start}
+.rk{font:500 11px var(--mono);color:var(--muted);letter-spacing:.06em}
+.nm{margin:2px 0 0;font:var(--name-w) 25px/1.05 var(--display);letter-spacing:var(--name-ls)}
+.ct{font-size:13.5px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:3px}
+.badge{font:600 11px var(--body);padding:3px 8px;border-radius:999px;white-space:nowrap;background:var(--accent-soft);color:var(--accent-ink)}
+.badge.done{background:var(--s0);color:var(--muted)}
+.gauge{width:62px;height:62px;position:relative;display:grid;place-items:center;flex:none}
+.gauge svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.gauge circle{fill:none;stroke-width:5}
+.gauge .bgc{stroke:var(--s0)}.gauge .fg{stroke:var(--accent);stroke-linecap:round;transition:stroke-dasharray .5s ease}
+.gauge b{font:800 21px/1 var(--display)}
+.route{display:flex;align-items:center;gap:8px;font:500 12.5px var(--mono)}
+.route .ln{flex:1;border-top:1.5px dashed var(--line);position:relative;min-width:20px}
+.route .ln::after{content:"";position:absolute;right:-1px;top:-4.5px;width:7px;height:7px;border-radius:50%;background:var(--sky)}
+.route .lbl{color:var(--muted);font:500 12.5px var(--body);white-space:nowrap}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);border-block:1px solid var(--line)}
+.facts div{padding:8px 0;display:grid;gap:1px;min-width:0}
+.facts div+div{padding-left:10px;border-left:1px solid var(--line)}
+.facts small{font:600 10px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.facts b{font:700 15px var(--body);font-variant-numeric:tabular-nums;white-space:nowrap}
+.facts b.over{color:var(--over)}
+.bars{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;align-items:end;height:28px}
+.bars i{display:block;border-radius:3px 3px 1px 1px;background:var(--s0);height:6px}
+.bars i.v1{height:15px;background:var(--s1)}.bars i.v2{height:27px;background:var(--s2)}
+.bars i.sel{background:var(--accent)}
+.ml{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;font:500 9.5px var(--mono);color:var(--muted);text-align:center;margin-top:4px}
+.ml .sel{color:var(--accent-ink);font-weight:700}
+.dots{display:none;grid-template-columns:repeat(12,1fr);gap:3px}
+.dots span{display:grid;justify-items:center;gap:4px;font:600 10px var(--body);color:var(--muted)}
+.dots i{width:14px;height:14px;border-radius:50%;background:var(--s0);display:block}
+.dots .v1 i{background:var(--s1)}.dots .v2 i{background:var(--s2)}
+.dots .sel{color:var(--ink)}.dots .sel i{box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--accent)}
+.why{margin:0;font-size:14.5px;line-height:1.45}
+.why span{color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font:500 12px var(--body);padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.tag.hit{background:var(--accent-soft);border-color:transparent;color:var(--accent-ink);font-weight:600}
+.btn{font:600 14.5px var(--body);border-radius:12px;padding:12px 14px;border:0;width:100%;background:var(--accent-soft);color:var(--accent-ink);cursor:pointer;text-align:center;text-decoration:none;display:block}
+.btn.primary{background:var(--accent);color:var(--on-accent)}
+.btn:disabled{opacity:.6}
+.more{background:none;border:1px dashed var(--line);border-radius:14px;padding:12px;color:var(--muted);font-weight:600;cursor:pointer}
+
+/* Variantes de carte selon le style */
+body.lumiere .card,body.mix .card{border:0;box-shadow:0 1px 0 var(--line),0 8px 24px -18px rgba(20,30,40,.4)}
+body.lumiere .card .sky,body.mix .card .sky{display:flex}
+body.lumiere .gauge,body.lumiere .route,body.lumiere .bars,body.lumiere .ml,body.lumiere .rk{display:none}
+body.lumiere .dots{display:grid}
+body.lumiere .card .in{padding-top:4px}
+body:not(.lumiere) .card .sky .sc{display:none}
+body.mix .card .in{padding-top:2px}
+body.mix .card .sky{height:44px}
+body.mix .ct .badge,body.lumiere .ct .badge{display:none}
+body.mix .nm,body.mix .wish h3,body.mix .trip h3,body.mix .sheet .sh h2{font-family:"Young Serif",Georgia,serif;font-weight:400;letter-spacing:0}
+body.mix .wish,body.mix .trip,body.mix .stat{border:0;box-shadow:0 1px 0 var(--line)}
+
+/* Envies */
+.wish{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:10px;text-align:left;width:100%;cursor:pointer}
+body.lumiere .wish{border:0;box-shadow:0 1px 0 var(--line)}
+.wish .t{display:flex;justify-content:space-between;gap:10px;align-items:start}
+.wish h3{margin:0;font:var(--name-w) 19px/1.15 var(--display);letter-spacing:var(--name-ls)}
+.wish .c{font-size:13px;color:var(--muted)}
+.prio{font:600 11px var(--body);padding:3px 8px;border-radius:999px;white-space:nowrap}
+.prio.p0{background:var(--accent);color:var(--on-accent)}
+.prio.p1{background:var(--accent-soft);color:var(--accent-ink)}
+.prio.p2{background:var(--s0);color:var(--muted)}
+.mini{display:grid;grid-template-columns:repeat(12,1fr);gap:2px}
+.mini i{height:5px;border-radius:2px;background:var(--s0)}.mini i.on{background:var(--s2)}.mini i.sel{outline:1.5px solid var(--accent);outline-offset:1px}
+.wmeta{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted)}
+.wmeta b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.filters select{appearance:none;-webkit-appearance:none;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 13px;font:600 13.5px var(--body);color:var(--ink)}
+.empty{border:1px dashed var(--line);border-radius:16px;padding:20px;color:var(--muted);text-align:center}
+
+/* Voyages */
+.year{font:700 13px var(--mono);color:var(--muted);letter-spacing:.06em;padding:10px 0 2px}
+.tl{display:grid;gap:10px;position:relative;padding-left:22px}
+.tl::before{content:"";position:absolute;left:6px;top:8px;bottom:8px;border-left:1.5px dashed var(--line)}
+.trip{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:13px 14px;display:grid;gap:8px}
+body.lumiere .trip{border:0;box-shadow:0 1px 0 var(--line)}
+.trip::before{content:"";position:absolute;left:-21px;top:18px;width:11px;height:11px;border-radius:50%;background:var(--bg);border:2px solid var(--sky)}
+.trip .t{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.trip h3{margin:0;font:var(--name-w) 19px/1.15 var(--display);letter-spacing:var(--name-ls)}
+.trip .d{font:500 12.5px var(--mono);color:var(--muted);white-space:nowrap}
+.trip .f{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted)}
+.trip .f b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.trip a{font:600 13px var(--body);color:var(--accent-ink);text-decoration:none}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:grid}
+body.lumiere .stat{border:0;box-shadow:0 1px 0 var(--line)}
+.stat small{font:600 10px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.stat b{font:var(--name-w) 21px var(--display);font-variant-numeric:tabular-nums}
+
+/* Barre d'onglets */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--bar);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);
+  border-top:1px solid var(--line);padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+.tabs .in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.tab{display:grid;justify-items:center;gap:2px;font:600 11px var(--body);color:var(--muted);background:none;border:0;padding:6px 0 4px;cursor:pointer;position:relative}
+.tab svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-current="page"]{color:var(--accent)}
+body.lumiere .tab[aria-current="page"]{color:var(--accent)}
+.tab .cnt{position:absolute;top:2px;left:calc(50% + 8px);font:700 10px var(--mono);background:var(--accent);color:var(--on-accent);border-radius:999px;padding:0 5px;min-width:16px;text-align:center}
+
+/* Feuilles */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:30;opacity:0;pointer-events:none;transition:opacity .25s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:31;max-width:520px;margin:0 auto;background:var(--surface);border-radius:22px 22px 0 0;
+  max-height:calc(100% - env(safe-area-inset-top,0px) - 24px);display:grid;grid-template-rows:auto 1fr auto;transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+.sheet.on{transform:none}
+.sheet .grab{width:38px;height:5px;border-radius:3px;background:var(--line);margin:8px auto 2px}
+.sheet .sh{display:flex;justify-content:space-between;align-items:center;padding:6px 18px 8px}
+.sheet .sh h2{margin:0;font:var(--name-w) 21px var(--display);letter-spacing:var(--name-ls)}
+.x{border:0;background:var(--bg);border-radius:999px;width:32px;height:32px;cursor:pointer;font-size:18px;line-height:1;color:var(--muted)}
+.sheet .sb{overflow:auto;padding:4px 18px 16px;display:grid;gap:20px;align-content:start;overscroll-behavior:contain}
+.sheet .sf{padding:10px 18px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+.lbl{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline}
+.lbl b{font:700 14px var(--mono);color:var(--ink);letter-spacing:0;text-transform:none}
+.months{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.months button{font:600 13px var(--body);padding:9px 0;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;cursor:pointer}
+.months button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px}
+.money{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--bg)}
+.money input{border:0;background:transparent;color:var(--ink);font:500 20px var(--mono);width:100%;outline:none;min-width:0}
+.money span{color:var(--muted);font-size:13px;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 14px var(--body);padding:8px 13px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.segs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--bg);border-radius:12px;padding:3px;gap:3px}
+.segs button{border:0;background:none;padding:9px 4px;border-radius:9px;font:600 13.5px var(--body);color:var(--muted);cursor:pointer}
+.segs button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:14px}
+.kv dt{color:var(--muted)}.kv dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;z-index:40;
+  background:var(--ink);color:var(--bg);font:600 14px var(--body);padding:10px 16px;border-radius:12px;transition:.25s;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .sky-bg{filter:brightness(.6) saturate(.85)}}
+:root[data-theme="dark"] .sky-bg{filter:brightness(.6) saturate(.85)}
+@media (prefers-reduced-motion:no-preference){
+  .card,.wish,.trip{animation:rise .3s cubic-bezier(.2,.7,.2,1) both}
+  .screen:not([hidden]){animation:fade .2s ease both}
+  @keyframes rise{from{transform:translateY(6px)}to{transform:none}}
+  @keyframes fade{from{opacity:.4}to{opacity:1}}
+}
+@media (prefers-reduced-motion:reduce){.sheet,.scrim,.toast{transition:none}}
+</style>
+
+<div class="app">
+  <header class="head" id="head">
+    <div class="proto">Style
+      <span class="seg" id="styleSeg"><button data-s="balise">Balise</button><button data-s="lumiere">Lumière</button><button data-s="mix">Mélange</button></span>
+    </div>
+    <div class="title-row"><h1 id="title">Choisir</h1><span class="sync" id="sync">Exemple</span></div>
+    <div id="headChoose" class="row-scroll" aria-label="Critères"></div>
+    <div id="headPresets" class="row-scroll" aria-label="Départs rapides"></div>
+    <div id="headWish" class="row-scroll filters" aria-label="Filtres" hidden></div>
+  </header>
+
+  <main>
+    <section class="screen" id="s-choose" aria-live="polite"></section>
+    <section class="screen" id="s-wish" hidden></section>
+    <section class="screen" id="s-trips" hidden></section>
+  </main>
+</div>
+
+<nav class="tabs" aria-label="Onglets"><div class="in">
+  <button class="tab" data-tab="choose" aria-current="page"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>Choisir</button>
+  <button class="tab" data-tab="wish"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>Envies<span class="cnt" id="wishCnt"></span></button>
+  <button class="tab" data-tab="trips"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="19" cy="12" r="1.5"/></svg>Voyages faits</button>
+</div></nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="grab"></div>
+  <div class="sh"><h2 id="sheetTitle"></h2><button class="x" id="sheetClose" aria-label="Fermer">×</button></div>
+  <div class="sb" id="sheetBody"></div>
+  <div class="sf" id="sheetFoot"></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const MONTHS=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+const ML="JFMAMJJASOND";
+const WANTS=[["plage","Plage"],["nature","Nature & paysages"],["faune","Faune sauvage"],["rando","Randonnée"],["plongee","Plongée"],["culture","Culture & histoire"],["ville","Ville"],["gastro","Gastronomie"],["desert","Désert"],["neige","Neige"]];
+const SHORT={plage:"Plage",nature:"Nature",faune:"Faune",rando:"Rando",plongee:"Plongée",culture:"Culture",ville:"Ville",gastro:"Gastro",desert:"Désert",neige:"Neige"};
+const RULES=[["noBeach","Pas de plage"],["direct","Vol direct"],["calm","Peu de monde"],["kids","Avec enfants"]];
+const TAG=Object.fromEntries(WANTS), L2K=Object.fromEntries(WANTS.map(([k,l])=>[l,k]));
+const D=[
+["Marrakech","Maroc","RAK",3.3,1,180,95,["culture","ville","gastro","desert"],[1,2,2,2,2,1,0,0,1,2,2,1],2,"Riads, souks et désert d'Agafay à une heure de route."],
+["Lisbonne","Portugal","LIS",2.7,1,160,110,["ville","culture","gastro","plage"],[0,1,1,2,2,2,1,1,2,2,1,0],2,"Ville lumineuse, cuisine simple et plages de Cascais juste à côté."],
+["Tenerife","Canaries, Espagne","TFS",4.3,1,220,100,["plage","nature","rando","plongee"],[2,2,2,2,2,1,1,1,2,2,2,2],2,"Le soleil d'hiver le plus proche, avec le Teide à gravir."],
+["Madère","Portugal","FNC",3.8,1,240,110,["nature","rando","gastro"],[1,1,2,2,2,2,2,2,2,2,1,1],1,"Levadas en falaise et forêts de lauriers, climat doux toute l'année."],
+["Açores","Portugal","PDL",3.5,1,320,105,["nature","rando","faune","plongee"],[0,0,1,2,2,2,2,2,2,1,0,0],0,"Volcans, lacs de cratère et observation des baleines."],
+["Sicile","Italie","CTA",2.7,1,170,100,["culture","gastro","plage","nature"],[0,0,1,2,2,2,1,1,2,2,1,0],2,"Etna, temples grecs et cuisine de rue."],
+["Crète","Grèce","HER",3.5,1,220,90,["plage","rando","culture","plongee"],[0,0,1,2,2,2,1,1,2,2,1,0],2,"Gorges à randonner et criques turquoise."],
+["Écosse","Royaume-Uni","EDI",1.7,1,150,140,["nature","rando","culture"],[0,0,1,1,2,2,2,2,2,1,0,0],1,"Highlands, îles et distilleries, à moins de deux heures de vol."],
+["Islande","Islande","KEF",3.3,1,320,220,["nature","rando","neige"],[1,1,1,1,1,2,2,2,1,1,0,1],1,"Glaciers, cascades et aurores boréales l'hiver."],
+["Lofoten","Norvège","BOO",4.5,0,380,190,["nature","rando","neige"],[1,1,1,0,1,2,2,2,1,0,0,1],1,"Pics plongeant dans la mer, randonnées sous le soleil de minuit."],
+["Laponie","Finlande","RVN",3.8,0,450,210,["neige","nature","faune"],[2,2,2,0,0,1,1,0,1,0,0,2],1,"Chiens de traîneau, rennes et aurores."],
+["Géorgie","Géorgie","TBS",4.8,1,320,70,["rando","gastro","culture","nature"],[0,0,1,1,2,2,2,2,2,2,1,0],0,"Caucase sauvage, vin en amphore et monastères perchés."],
+["Jordanie","Jordanie","AMM",4.8,1,400,130,["desert","culture","rando","plongee"],[0,1,2,2,2,1,0,0,1,2,2,1],1,"Pétra, Wadi Rum et la mer Rouge à Aqaba."],
+["Égypte","Égypte","HRG",4.8,1,380,80,["culture","plongee","desert","plage"],[2,2,2,2,1,0,0,0,1,2,2,2],2,"Temples du Nil et récifs parmi les plus beaux de la mer Rouge."],
+["Oman","Oman","MCT",8.5,0,650,160,["desert","nature","plongee","plage"],[2,2,2,1,0,0,0,0,1,2,2,2],0,"Fjords de Musandam, wadis et dunes de Wahiba."],
+["Ouzbékistan","Ouzbékistan","TAS",6.5,1,560,70,["culture","ville","gastro"],[0,0,1,2,2,1,0,0,1,2,1,0],0,"Samarcande et Boukhara, la route de la soie en mosaïques bleues."],
+["Sénégal","Sénégal","DSS",5.5,1,480,85,["culture","plage","nature","faune"],[2,2,2,2,1,0,0,0,0,1,2,2],0,"Sine Saloum, île de Gorée et lumière douce de l'hiver."],
+["Cap-Vert","Cap-Vert","SID",6,1,450,90,["plage","rando","nature"],[2,2,2,2,2,1,1,1,1,2,2,2],1,"Randonnées volcaniques à Santo Antão et plages de Sal."],
+["Kenya","Kenya","NBO",8.5,1,800,280,["faune","nature"],[2,2,1,0,0,1,2,2,2,2,1,2],1,"Masai Mara et la grande migration de juillet à octobre."],
+["Tanzanie","Tanzanie","JRO",11,0,900,300,["faune","nature","plage"],[2,2,1,0,0,2,2,2,2,2,1,2],1,"Serengeti, cratère du Ngorongoro et Kilimandjaro."],
+["Namibie","Namibie","WDH",13,0,950,200,["faune","desert","nature"],[1,1,1,2,2,2,2,2,2,2,1,1],0,"Dunes de Sossusvlei, Etosha et grands espaces vides : road trip en autonomie."],
+["Botswana","Botswana","MUB",14,0,1150,450,["faune","nature"],[0,0,0,1,1,2,2,2,2,2,1,0],0,"Delta de l'Okavango en mokoro, safari très peu fréquenté."],
+["Afrique du Sud","Afrique du Sud","CPT",11.5,1,900,160,["faune","nature","gastro","rando"],[2,2,2,2,1,1,1,1,2,2,2,2],1,"Le Cap, les vignobles et un safari dans le Kruger."],
+["Madagascar","Madagascar","TNR",11,1,950,110,["nature","faune","plongee","plage"],[0,0,1,2,2,2,2,2,2,2,2,1],0,"Lémuriens, baobabs et tsingy, une faune qu'on ne voit nulle part ailleurs."],
+["La Réunion","France","RUN",11,1,850,130,["rando","nature","plongee"],[1,0,1,2,2,2,2,2,2,2,2,1],1,"Cirques, Piton de la Fournaise et lagon."],
+["Guadeloupe","France","PTP",8.5,1,600,130,["plage","plongee","nature"],[2,2,2,2,1,1,1,0,0,1,1,2],1,"Réserve Cousteau, Soufrière et plages de Grande-Terre."],
+["Costa Rica","Costa Rica","SJO",11,1,800,140,["nature","faune","rando","plage"],[2,2,2,2,1,0,1,1,0,0,1,2],1,"Forêts de nuages, volcans et paresseux."],
+["Yucatán","Mexique","CUN",11,1,750,120,["plage","culture","plongee"],[2,2,2,2,1,0,0,0,0,1,2,2],2,"Cénotes, cités mayas et mer des Caraïbes."],
+["Pérou","Pérou","LIM",12,1,950,110,["culture","rando","nature"],[1,1,1,2,2,2,2,2,2,2,1,1],1,"Machu Picchu, Vallée sacrée et lac Titicaca."],
+["Patagonie","Argentine & Chili","FTE",17,0,1200,160,["nature","rando","faune"],[2,2,2,1,0,0,0,0,0,1,2,2],0,"Fitz Roy, glacier Perito Moreno et Torres del Paine."],
+["Japon","Japon","HND",14,1,950,170,["culture","ville","gastro","nature"],[1,1,2,2,2,0,0,0,1,2,2,1],2,"Kyoto, Alpes japonaises et onsen, idéal au printemps et à l'automne."],
+["Vietnam","Vietnam","HAN",12,1,750,70,["culture","gastro","nature","plage"],[1,2,2,2,1,1,1,1,1,2,2,1],2,"Baie d'Halong, rizières du Nord et cuisine de rue."],
+["Sri Lanka","Sri Lanka","CMB",13,0,700,80,["culture","nature","faune","plage"],[2,2,2,1,1,1,1,1,1,1,1,2],1,"Temples, plantations de thé et éléphants de Minneriya."],
+["Thaïlande","Thaïlande","BKK",11.5,1,700,80,["plage","culture","gastro","plongee"],[2,2,2,1,1,0,0,0,0,1,2,2],2,"Îles d'Andaman, temples de Chiang Mai et street food."],
+["Indonésie","Bali & Komodo","DPS",17,0,950,90,["plongee","plage","nature","culture"],[1,1,1,2,2,2,2,2,2,2,1,1],2,"Rizières de Bali et plongée avec les raies manta à Komodo."]
+];
+const PRESETS=[
+  {name:"Safari 2027",m:8,d:15,b:5000,w:["faune","nature"],r:["noBeach","calm"]},
+  {name:"Les 30 ans en janvier",m:0,d:5,b:900,w:["culture","gastro"],r:["direct"]},
+  {name:"Jordanie en mai",m:4,d:8,b:2000,w:["culture","desert","rando"],r:[]},
+  {name:"Long week-end",m:new Date().getMonth(),d:4,b:700,w:[],r:["direct"]},
+];
+// Données d'exemple : dans l'app, elles viennent de Notion.
+let WISHES=[
+  {id:"w1",name:"Safari en Namibie",country:"Namibie",wants:["Faune sauvage","Désert","Nature & paysages"],months:[6,7,8,9],ideal:16,budget:4500,who:"Julien",kids:"Sans enfants",prio:"Très envie",status:"En réflexion",notes:"En 4x4 avec tente de toit."},
+  {id:"w2",name:"Aurores en Islande",country:"Islande",wants:["Nature & paysages","Neige"],months:[1,2,10],ideal:7,budget:2200,who:"Julien",kids:"Sans enfants",prio:"Envie",status:"Idée",notes:""},
+  {id:"w3",name:"Mongolie à cheval",country:"Mongolie",wants:["Nature & paysages","Randonnée","Désert"],months:[6,7],ideal:18,budget:3800,who:"Copains",kids:"Sans enfants",prio:"Un jour",status:"Idée",notes:"Fête du Naadam mi-juillet."},
+  {id:"w4",name:"Japon au printemps",country:"Japon",wants:["Culture & histoire","Gastronomie","Ville"],months:[2,3],ideal:15,budget:4000,who:"Famille",kids:"Avec enfants",prio:"Envie",status:"Planifié",notes:"Sakura fin mars."},
+  {id:"w5",name:"Açores en famille",country:"Portugal",wants:["Nature & paysages","Faune sauvage"],months:[5,6,7,8],ideal:10,budget:1600,who:"Famille",kids:"Avec enfants",prio:"Très envie",status:"Idée",notes:"Baleines au large de Pico."},
+];
+const TRIPS=[
+  {name:"Kenya",start:"2024-08-02",end:"2024-08-16",budget:9000,pp:4500},
+  {name:"Lisbonne",start:"2024-04-18",end:"2024-04-21",budget:1100,pp:550},
+  {name:"Crète",start:"2023-06-10",end:"2023-06-20",budget:3200,pp:1600},
+  {name:"Écosse",start:"2022-07-05",end:"2022-07-17",budget:4100,pp:2050},
+  {name:"Japon",start:"2019-10-12",end:"2019-10-28",budget:7600,pp:3800},
+];
+const PRIO={"Très envie":10,"Envie":6,"Un jour":3};
+
+const KEY="mesvoyages-proto-v1";
+let st={m:8,d:15,b:5000,w:new Set(["faune","nature"]),r:new Set(["noBeach","calm"])};
+let ui={tab:"choose",style:"balise",shown:8,wf:{kids:null,prio:null,m:-1}};
+try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s){st={m:s.m,d:s.d,b:s.b,w:new Set(s.w),r:new Set(s.r)};ui.style=s.style||"balise"}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({m:st.m,d:st.d,b:st.b,w:[...st.w],r:[...st.r],style:ui.style}))}catch(e){}}
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const r50=n=>Math.round(n/50)*50;
+const eur=n=>r50(n).toLocaleString("fr-FR")+" €";
+const hrs=h=>{const H=Math.floor(h),M=Math.round((h-H)*60);return H+" h"+(M?" "+String(M).padStart(2,"0"):"")};
+const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+
+/* ---------- Score (identique à src/lib/score.ts) ---------- */
+function core({season,tags,cost,minDays,crowd,beachFirst}){
+  const wants=[...st.w],hits=wants.filter(w=>tags.includes(w));let p=0;
+  p+=season===2?32:season===1?18:0;
+  p+=wants.length?33*hits.length/wants.length:33;
+  let over=0;if(cost==null)p+=12;else{over=cost>st.b?(cost-st.b)/Math.max(st.b,1):0;p+=Math.max(0,20*(1-over*2))}
+  p+=minDays==null?7:st.d>=minDays?10:Math.max(0,10-(minDays-st.d)*3);
+  p+=st.r.has("calm")?(crowd==null?3:[5,2,0][crowd]):5;
+  if(st.r.has("noBeach")&&beachFirst)p-=20;
+  if(wants.length&&!hits.length)p-=10;
+  return {p,hits,over};
+}
+const clamp=n=>Math.max(0,Math.min(100,Math.round(n)));
+const wishOk=w=>!(st.r.has("kids")&&w.kids==="Sans enfants");
+const catFor=w=>D.find(x=>norm(w.name).includes(norm(x[0]).replace(/^la /,"")));
+const tripFor=x=>TRIPS.find(t=>{const n=norm(t.name);return norm(x[0]+" "+x[1]).includes(n)||n.includes(norm(x[0]))});
+function rank(){
+  const kept=D.filter(x=>!(st.r.has("direct")&&!x[4]));
+  const wl=WISHES.filter(wishOk);
+  const res=kept.map(x=>{
+    const [,, ,h,direct,fly,day,tags,season,crowd]=x;
+    const travel=direct?h:h+3,cost=fly+day*st.d,minDays=travel<4?3:travel<7?6:travel<11?9:12;
+    const c=core({season:season[st.m],tags,cost,minDays,crowd,beachFirst:tags[0]==="plage"});
+    const wish=wl.find(w=>catFor(w)===x),trip=tripFor(x);
+    if(wish)c.p+=PRIO[wish.prio]||5;if(trip)c.p-=15;
+    return {kind:"cat",x,s:season[st.m],season,cost,minDays,wish,trip,tags,...c,score:clamp(c.p)};
+  });
+  wl.filter(w=>!catFor(w)).forEach(w=>{
+    const tags=w.wants.map(l=>L2K[l]).filter(Boolean),s=w.months.length?(w.months.includes(st.m)?2:0):1;
+    const c=core({season:s,tags,cost:w.budget,minDays:w.ideal?Math.max(2,w.ideal-3):null,crowd:null,beachFirst:false});
+    c.p+=PRIO[w.prio]||5;
+    res.push({kind:"wish",w,s,season:MONTHS.map((_,j)=>w.months.length?(w.months.includes(j)?2:0):1),cost:w.budget,tags,...c,score:clamp(c.p)});
+  });
+  return {res:res.sort((a,b)=>b.score-a.score),hidden:D.length-kept.length};
+}
+function why(r){
+  const o=[],mo=MONTHS[st.m].toLowerCase();
+  o.push(r.s===2?`très bonne saison en ${mo}`:r.s===1?`saison correcte en ${mo}`:`mauvaise saison en ${mo}`);
+  if(r.over>0)o.push(`dépasse le budget d'environ ${eur(r.cost-st.b)}`);
+  if(r.kind==="cat"&&st.d<r.minDays)o.push(`un peu loin pour ${st.d} jours (${r.minDays} conseillés)`);
+  const s=o.join(", ");return s[0].toUpperCase()+s.slice(1)+".";
+}
+
+/* ---------- Ciel selon le point fort ---------- */
+const SKY={plage:["#BFE8E4","#6CC5C9","#2F8FB0"],plongee:["#BFE3F2","#4FA3C7","#1E5A8A"],desert:["#F6D9A4","#E89C6A","#B9654A"],neige:["#EAF1F8","#B8CDE6","#7C93C4"],
+  faune:["#F3DFA0","#D3A85E","#8A6A3E"],nature:["#DDE8D5","#9DBF9A","#4F7C6B"],rando:["#E3E9D8","#A7B98F","#5E7458"],culture:["#F6D3B8","#D99AA6","#7C6FA8"],ville:["#E4E1F0","#A9A3CF","#5A5891"],gastro:["#F8DCC0","#E6A07A","#A2523F"]};
+const skyBg=t=>{const c=SKY[t]||SKY.nature;return `background:linear-gradient(180deg,${c[0]},${c[1]} 70%,${c[2]})`};
+
+/* ---------- Rendu : Choisir ---------- */
+function headChoose(){
+  const wl=[...st.w],rl=[...st.r];
+  $("headChoose").innerHTML=
+    `<button class="pill on" data-open="crit">${MONTHS[st.m]}</button>`+
+    `<button class="pill" data-open="crit">${st.d} jours</button>`+
+    `<button class="pill" data-open="crit">${st.b.toLocaleString("fr-FR")} €</button>`+
+    `<button class="pill" data-open="crit">${wl.length?SHORT[wl[0]]+(wl.length>1?` <span class="n">+${wl.length-1}</span>`:""):"Toutes envies"}</button>`+
+    `<button class="pill" data-open="crit">${rl.length?`Contraintes <span class="n">${rl.length}</span>`:"Sans contrainte"}</button>`;
+  $("headPresets").innerHTML=PRESETS.map((p,i)=>`<button class="preset" data-preset="${i}">${p.name}</button>`).join("");
+}
+function strip(season){
+  return `<div><div class="bars" aria-label="Saisonnalité sur 12 mois">${season.map((v,j)=>`<i class="v${v}${j===st.m?" sel":""}" title="${MONTHS[j]}"></i>`).join("")}</div>
+  <div class="ml" aria-hidden="true">${[...ML].map((c,j)=>`<span class="${j===st.m?"sel":""}">${c}</span>`).join("")}</div></div>
+  <div class="dots" aria-hidden="true">${season.map((v,j)=>`<span class="v${v}${j===st.m?" sel":""}"><i></i>${ML[j]}</span>`).join("")}</div>`;
+}
+function gauge(n){const c=2*Math.PI*26;return `<div class="gauge" aria-label="Score ${n} sur 100"><svg viewBox="0 0 62 62"><circle class="bgc" cx="31" cy="31" r="26"/><circle class="fg" cx="31" cy="31" r="26" stroke-dasharray="${c*n/100} ${c}"/></svg><b>${n}</b></div>`}
+const CROWD=["Calme","Moyen","Très fréquenté"],SEASON=["Mauvaise","Correcte","Idéale"];
+function card(r,i){
+  const isCat=r.kind==="cat",name=isCat?r.x[0]:r.w.name,country=isCat?r.x[1]:r.w.country;
+  const wish=isCat?r.wish:r.w,year=r.trip?r.trip.start.slice(0,4):"";
+  const badges=(wish?`<span class="badge">Sur ta liste${wish.prio?" · "+esc(wish.prio):""}</span>`:"")+(r.trip?`<span class="badge done">Déjà fait en ${year}</span>`:"");
+  const route=isCat?`<div class="route"><span>CDG</span><span class="ln"></span><span>${r.x[2]}</span><span class="lbl">${hrs(r.x[3])} · ${r.x[4]?"direct":"1 escale"}</span></div>`:"";
+  const facts=`<div class="facts">
+    <div><small>Coût / pers.</small><b class="${r.over>0?"over":""}">${r.cost!=null?"≈ "+eur(r.cost):"À estimer"}</b></div>
+    <div><small>${isCat?"Monde":"Durée idéale"}</small><b>${isCat?CROWD[r.x[9]]:(r.w.ideal?r.w.ideal+" j":"—")}</b></div>
+    <div><small>Saison</small><b>${SEASON[r.s]}</b></div></div>`;
+  const pitch=isCat?r.x[10]:(r.w.notes||"Une idée de ta liste, hors catalogue.");
+  const key=isCat?r.x[2]:r.w.id;
+  const action=isCat&&!wish?`<button class="btn" data-add="${key}">Ajouter à mes envies</button>`:wish?`<button class="btn" data-openwish="${wish.id}">Voir dans mes envies</button>`:"";
+  return `<article class="card">
+    <div class="sky sky-bg" style="${skyBg(r.tags[0])}">${wish?`<span class="badge">Sur ta liste</span>`:r.trip?`<span class="badge">Déjà fait en ${year}</span>`:"<span></span>"}<span class="sc"><b>${r.score}</b><small>sur 100</small></span></div>
+    <div class="in">
+      <div class="hd"><div><div class="rk">${String(i+1).padStart(2,"0")}${i===0?" · TOP":""}</div><h2 class="nm">${esc(name)}</h2><div class="ct">${esc(country)} ${badges}</div></div>${gauge(r.score)}</div>
+      ${route}${facts}${strip(r.season)}
+      <p class="why">${esc(pitch)} <span>${why(r)}</span></p>
+      <div class="tags">${r.tags.map(t=>`<span class="tag${r.hits.includes(t)?" hit":""}">${TAG[t]}</span>`).join("")}</div>
+      ${action}
+    </div></article>`;
+}
+function renderChoose(){
+  headChoose();
+  const {res,hidden}=rank(),shown=res.slice(0,ui.shown);
+  $("s-choose").innerHTML=`<div class="sum"><b>${res.length} destinations classées</b><span>${hidden?hidden+" écartées (escale)":"Score sur 100"}</span></div>`+
+    (shown.length?shown.map(card).join(""):`<div class="empty">Aucune destination ne passe ces contraintes. Essaie d'autoriser les escales.</div>`)+
+    (res.length>shown.length?`<button class="more" data-more>Voir ${Math.min(8,res.length-shown.length)} de plus</button>`:"")+
+    `<p class="note">Coûts et temps de vol estimés depuis Paris : vol A/R en éco et budget moyen sur place.</p>`;
+}
+
+/* ---------- Rendu : Envies ---------- */
+const PRIOS=["Très envie","Envie","Un jour"],STATUSES=["Idée","En réflexion","Planifié"];
+function headWish(){
+  const f=ui.wf;
+  $("headWish").innerHTML=
+    `<button class="pill${f.kids==="Avec enfants"?" on":""}" data-wf="kids" data-v="Avec enfants">Avec enfants</button>`+
+    `<button class="pill${f.kids==="Sans enfants"?" on":""}" data-wf="kids" data-v="Sans enfants">Sans enfants</button>`+
+    PRIOS.map(p=>`<button class="pill${f.prio===p?" on":""}" data-wf="prio" data-v="${p}">${p}</button>`).join("")+
+    `<select id="wfMonth" aria-label="Mois"><option value="-1">Tous les mois</option>${MONTHS.map((m,i)=>`<option value="${i}"${f.m===i?" selected":""}>${m}</option>`).join("")}</select>`;
+}
+function wishCard(w){
+  const pi=PRIOS.indexOf(w.prio);
+  return `<button class="wish" data-openwish="${w.id}">
+    <div class="t"><div><h3>${esc(w.name)}</h3><div class="c">${esc(w.country)}${w.kids?" · "+esc(w.kids):""}</div></div><span class="prio p${pi<0?2:pi}">${esc(w.prio||"—")}</span></div>
+    <div class="mini" aria-label="Meilleurs mois">${MONTHS.map((_,j)=>`<i class="${w.months.includes(j)?"on":""}${ui.wf.m===j?" sel":""}"></i>`).join("")}</div>
+    <div class="wmeta"><span><b>${w.ideal?w.ideal+" j":"—"}</b> idéal</span><span><b>${w.budget?eur(w.budget):"—"}</b> / pers.</span><span>${esc(w.status||"")}</span></div>
+  </button>`;
+}
+function renderWish(){
+  headWish();
+  const f=ui.wf;
+  const list=WISHES.filter(w=>(!f.kids||w.kids===f.kids)&&(!f.prio||w.prio===f.prio)&&(f.m<0||w.months.includes(f.m)))
+    .sort((a,b)=>PRIOS.indexOf(a.prio)-PRIOS.indexOf(b.prio));
+  $("s-wish").innerHTML=`<div class="sum"><b>${list.length} envie${list.length>1?"s":""}</b><span>sur ${WISHES.length}</span></div>`+
+    `<div class="example">Exemples : dans l'app, ta base « Envies de voyage » s'affiche ici.</div>`+
+    (list.length?list.map(wishCard).join(""):`<div class="empty">Aucune envie ne correspond à ces filtres.</div>`);
+  $("wishCnt").textContent=WISHES.length;
+}
+
+/* ---------- Rendu : Voyages faits ---------- */
+const fmtD=(a,b)=>{const A=new Date(a),B=new Date(b),o={day:"numeric",month:"short"};
+  return A.getMonth()===B.getMonth()?`${A.getDate()} → ${B.toLocaleDateString("fr-FR",o)}`:`${A.toLocaleDateString("fr-FR",o)} → ${B.toLocaleDateString("fr-FR",o)}`};
+const days=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5)+1;
+function renderTrips(){
+  const total=TRIPS.reduce((s,t)=>s+days(t.start,t.end),0),spent=TRIPS.reduce((s,t)=>s+t.budget,0);
+  let html=`<div class="stats"><div class="stat"><small>Voyages</small><b>${TRIPS.length}</b></div><div class="stat"><small>Jours</small><b>${total}</b></div><div class="stat"><small>Budget</small><b>${Math.round(spent/1000)} k€</b></div></div>`+
+    `<div class="example">Exemples : dans l'app, ta base « Destinations » (statut Visité) s'affiche ici.</div>`;
+  let y="";html+=`<div>`;
+  TRIPS.forEach(t=>{
+    const ty=t.start.slice(0,4);
+    if(ty!==y){html+=(y?`</div>`:"")+`<div class="year">${ty}</div><div class="tl">`;y=ty}
+    const n=days(t.start,t.end);
+    html+=`<article class="trip"><div class="t"><h3>${esc(t.name)}</h3><span class="d">${fmtD(t.start,t.end)}</span></div>
+      <div class="f"><span><b>${n} j</b></span><span><b>${eur(t.budget)}</b> au total</span><span><b>${eur(t.pp)}</b> / pers.</span><span><b>${eur(t.pp/n)}</b> / jour</span></div>
+      <a href="#" data-notion>Ouvrir dans Notion ↗</a></article>`;
+  });
+  html+=`</div></div>`;
+  $("s-trips").innerHTML=html;
+}
+
+/* ---------- Feuilles ---------- */
+let lastFocus=null;
+function openSheet(title,body,foot){
+  lastFocus=document.activeElement;
+  $("sheetTitle").textContent=title;$("sheetBody").innerHTML=body;$("sheetFoot").innerHTML=foot||"";
+  $("sheetBody").scrollTop=0;$("scrim").classList.add("on");$("sheet").classList.add("on");
+  setTimeout(()=>$("sheetClose").focus(),50);
+}
+function closeSheet(){$("scrim").classList.remove("on");$("sheet").classList.remove("on");if(lastFocus)lastFocus.focus()}
+function critBody(){
+  return `<div><div class="lbl">Mois du départ <b>${MONTHS[st.m]}</b></div><div class="months">${MONTHS.map((m,i)=>`<button data-m="${i}" aria-pressed="${i===st.m}" aria-label="${m}">${m.slice(0,3)}</button>`).join("")}</div></div>
+  <div><div class="lbl">Durée <b id="dOut">${st.d} jours</b></div><input type="range" id="days" min="2" max="21" value="${st.d}" aria-label="Durée en jours"></div>
+  <div><div class="lbl">Budget par personne <b>vols + sur place</b></div><div class="money"><input id="budget" type="number" inputmode="numeric" min="200" step="100" value="${st.b}" aria-label="Budget en euros"><span>€ / pers.</span></div></div>
+  <div><div class="lbl">Envies</div><div class="chips">${WANTS.map(([k,l])=>`<button class="chip" data-w="${k}" aria-pressed="${st.w.has(k)}">${l}</button>`).join("")}</div></div>
+  <div><div class="lbl">Contraintes</div><div class="chips">${RULES.map(([k,l])=>`<button class="chip" data-r="${k}" aria-pressed="${st.r.has(k)}">${l}</button>`).join("")}</div></div>`;
+}
+function critFoot(){return `<button class="btn primary" data-close>Voir les ${rank().res.length} destinations</button>`}
+function openCrit(){openSheet("Critères",critBody(),critFoot())}
+function refreshCrit(){
+  document.querySelectorAll("#sheetBody [data-m]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.m===st.m));
+  document.querySelectorAll("#sheetBody [data-w]").forEach(b=>b.setAttribute("aria-pressed",st.w.has(b.dataset.w)));
+  document.querySelectorAll("#sheetBody [data-r]").forEach(b=>b.setAttribute("aria-pressed",st.r.has(b.dataset.r)));
+  const l=document.querySelector("#sheetBody .lbl b");if(l)l.textContent=MONTHS[st.m];
+  $("sheetFoot").innerHTML=critFoot();
+}
+function openWish(id){
+  const w=WISHES.find(x=>x.id===id);if(!w)return;
+  openSheet(w.name,`
+    <div class="tags">${w.wants.map(l=>`<span class="tag">${esc(l)}</span>`).join("")}</div>
+    <div><div class="lbl">Priorité</div><div class="segs">${PRIOS.map(p=>`<button data-setprio="${p}" aria-pressed="${w.prio===p}">${p}</button>`).join("")}</div></div>
+    <div><div class="lbl">Statut</div><div class="segs">${STATUSES.map(s=>`<button data-setstatus="${s}" aria-pressed="${w.status===s}">${s}</button>`).join("")}</div></div>
+    <div><div class="lbl">Meilleurs mois</div><div class="mini" style="height:8px">${MONTHS.map((_,j)=>`<i class="${w.months.includes(j)?"on":""}" style="height:8px"></i>`).join("")}</div>
+      <div class="ml">${[...ML].map(c=>`<span>${c}</span>`).join("")}</div></div>
+    <dl class="kv"><dt>Pays</dt><dd>${esc(w.country)}</dd><dt>Durée idéale</dt><dd>${w.ideal?w.ideal+" jours":"—"}</dd><dt>Budget / pers.</dt><dd>${w.budget?eur(w.budget):"—"}</dd><dt>Avec qui</dt><dd>${esc(w.who||"—")}</dd><dt>Enfants</dt><dd>${esc(w.kids||"—")}</dd>${w.notes?`<dt>Notes</dt><dd style="font-weight:500">${esc(w.notes)}</dd>`:""}</dl>`,
+    `<a class="btn" href="#" data-notion>Ouvrir dans Notion ↗</a>`);
+  $("sheet").dataset.wish=id;
+}
+
+/* ---------- Navigation et évènements ---------- */
+const TITLES={choose:"Choisir",wish:"Envies",trips:"Voyages faits"};
+function setTab(t){
+  ui.tab=t;
+  document.querySelectorAll(".tab").forEach(b=>{if(b.dataset.tab===t)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+  $("s-choose").hidden=t!=="choose";$("s-wish").hidden=t!=="wish";$("s-trips").hidden=t!=="trips";
+  $("headChoose").hidden=$("headPresets").hidden=t!=="choose";$("headWish").hidden=t!=="wish";
+  $("title").textContent=TITLES[t];
+  window.scrollTo({top:0});
+  render();
+}
+function setStyle(s){
+  ui.style=s;document.body.classList.remove("balise","lumiere","mix");document.body.classList.add(s);
+  document.querySelectorAll("#styleSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.s===s));
+  save();
+}
+function render(){if(ui.tab==="choose")renderChoose();else if(ui.tab==="wish")renderWish();else renderTrips();$("wishCnt").textContent=WISHES.length}
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2200)}
+
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button,a");if(!t)return;
+  const d=t.dataset;
+  if(d.tab)return setTab(d.tab);
+  if(d.s)return setStyle(d.s);
+  if(d.open==="crit")return openCrit();
+  if(d.preset!==undefined){const p=PRESETS[d.preset];st={m:p.m,d:p.d,b:p.b,w:new Set(p.w),r:new Set(p.r)};ui.shown=8;save();renderChoose();return toast(p.name)}
+  if(d.more!==undefined){ui.shown+=8;return renderChoose()}
+  if(d.close!==undefined||t.id==="sheetClose")return closeSheet();
+  if(d.m!==undefined){st.m=+d.m;save();refreshCrit();return renderChoose()}
+  if(d.w){st.w.has(d.w)?st.w.delete(d.w):st.w.add(d.w);save();refreshCrit();return renderChoose()}
+  if(d.r){st.r.has(d.r)?st.r.delete(d.r):st.r.add(d.r);save();refreshCrit();return renderChoose()}
+  if(d.add){
+    const x=D.find(y=>y[2]===d.add);if(!x)return;
+    WISHES.push({id:"n"+Date.now(),name:x[0],country:x[1],wants:x[7].map(k=>TAG[k]),months:x[8].map((v,j)=>v===2?j:-1).filter(j=>j>=0),ideal:st.d,budget:r50(x[5]+x[6]*st.d),who:"Julien",kids:null,prio:"Envie",status:"Idée",notes:x[10]});
+    renderChoose();return toast(`${x[0]} ajouté à tes envies`);
+  }
+  if(d.openwish)return openWish(d.openwish);
+  if(d.setprio||d.setstatus){
+    const w=WISHES.find(x=>x.id===$("sheet").dataset.wish);if(!w)return;
+    if(d.setprio)w.prio=d.setprio;else w.status=d.setstatus;
+    t.parentElement.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b===t));
+    render();return toast("Enregistré dans Notion");
+  }
+  if(d.wf){ui.wf[d.wf]=ui.wf[d.wf]===d.v?null:d.v;return renderWish()}
+  if(d.notion!==undefined){e.preventDefault();return toast("Dans l'app, ouvre la page Notion")}
+});
+document.addEventListener("input",e=>{
+  if(e.target.id==="days"){st.d=+e.target.value;$("dOut").textContent=st.d+" jours";save();$("sheetFoot").innerHTML=critFoot();renderChoose()}
+  if(e.target.id==="budget"){st.b=Math.max(0,+e.target.value||0);save();$("sheetFoot").innerHTML=critFoot();renderChoose()}
+});
+document.addEventListener("change",e=>{if(e.target.id==="wfMonth"){ui.wf.m=+e.target.value;renderWish()}});
+$("scrim").addEventListener("click",closeSheet);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("sheet").classList.contains("on"))closeSheet()});
+// Glisser la feuille vers le bas pour la fermer
+(()=>{let y0=null;const s=$("sheet");
+  s.addEventListener("touchstart",e=>{if($("sheetBody").scrollTop<=0)y0=e.touches[0].clientY},{passive:true});
+  s.addEventListener("touchmove",e=>{if(y0==null)return;const dy=e.touches[0].clientY-y0;if(dy>0){s.style.transition="none";s.style.transform=`translateY(${dy}px)`}},{passive:true});
+  s.addEventListener("touchend",e=>{if(y0==null)return;const dy=e.changedTouches[0].clientY-y0;s.style.transition="";s.style.transform="";y0=null;if(dy>90)closeSheet()});
+})();
+window.addEventListener("scroll",()=>$("head").classList.toggle("scrolled",scrollY>4),{passive:true});
+
+setStyle(ui.style);setTab("choose");
+</script>
