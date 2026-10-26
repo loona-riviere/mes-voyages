@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { Destination } from "../data/catalogue";
 import type { NewWish, Trip, Wish, WishPatch } from "../shared/types";
 import { api, getPassphrase, loadCache, LockedError, saveCache } from "./api";
 import { enqueue, isLocalId, isNetworkError, loadQueue, localWish, saveQueue, type Pending } from "./queue";
@@ -8,6 +9,8 @@ export type SyncState = "loading" | "ok" | "error" | "offline" | "locked";
 export interface NotionData {
   wishes: Wish[];
   trips: Trip[];
+  /** Catalogue Notion ; vide tant qu'il n'a jamais été chargé (l'app utilise alors la copie de secours) */
+  catalogue: Destination[];
   state: SyncState;
   error: string | null;
   updatedAt: number | null;
@@ -34,6 +37,7 @@ export function useNotion(): NotionData {
   const queue = useRef<Pending[]>(loadQueue());
   const [wishes, setWishes] = useState<Wish[]>(withPending(cache?.wishes ?? [], queue.current));
   const [trips, setTrips] = useState<Trip[]>(cache?.trips ?? []);
+  const [catalogue, setCatalogue] = useState<Destination[]>(cache?.catalogue ?? []);
   const [updatedAt, setUpdatedAt] = useState<number | null>(cache?.at ?? null);
   const [state, setState] = useState<SyncState>(getPassphrase() ? "loading" : "locked");
   const [error, setError] = useState<string | null>(null);
@@ -71,11 +75,22 @@ export function useNotion(): NotionData {
     setError(null);
     try {
       await flush();
-      const [w, t] = await Promise.all([api.wishes(), api.trips()]);
+      // Le catalogue est facultatif : sans lui, l'app garde la dernière version ou la copie de secours.
+      const [w, t, fresh] = await Promise.all([
+        api.wishes(),
+        api.trips(),
+        api.catalogue().catch((e: unknown) => {
+          if (e instanceof LockedError || isNetworkError(e)) throw e;
+          console.warn("Catalogue Notion indisponible", e);
+          return null;
+        }),
+      ]);
+      const cat = fresh ?? loadCache()?.catalogue ?? [];
       const at = Date.now();
-      saveCache({ wishes: w, trips: t, at });
+      saveCache({ wishes: w, trips: t, catalogue: cat, at });
       setWishes(withPending(w, queue.current));
       setTrips(t);
+      setCatalogue(cat);
       setUpdatedAt(at);
       setState("ok");
     } catch (e) {
@@ -165,8 +180,8 @@ export function useNotion(): NotionData {
 
   // Garde le cache à jour avec ce qui est affiché (modifications comprises).
   useEffect(() => {
-    if (updatedAt) saveCache({ wishes: wishes.filter((w) => !isLocalId(w.id)), trips, at: updatedAt });
-  }, [wishes, trips, updatedAt]);
+    if (updatedAt) saveCache({ wishes: wishes.filter((w) => !isLocalId(w.id)), trips, catalogue, at: updatedAt });
+  }, [wishes, trips, catalogue, updatedAt]);
 
-  return { wishes, trips, state, error, updatedAt, pending, refresh, unlock, addWish, patchWish };
+  return { wishes, trips, catalogue, state, error, updatedAt, pending, refresh, unlock, addWish, patchWish };
 }

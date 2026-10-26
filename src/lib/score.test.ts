@@ -16,7 +16,7 @@ const neutral: Criteria = { months: [4], days: 10, budget: 3000, wants: [], rule
 
 const wish = (over: Partial<Wish>): Wish => ({
   id: "w1", url: "https://notion.so/w1", name: "Idée", country: "", wants: [], bestMonths: [],
-  idealDays: null, budget: null, kids: null, priority: null, status: null, notes: "", ...over,
+  idealDays: null, budget: null, kids: null, priority: null, status: null, notes: "", destinationId: null, ...over,
 });
 const trip = (over: Partial<Trip>): Trip => ({
   id: "t1", url: "https://notion.so/t1", name: "Voyage", status: "Visité", start: "2024-08-01", end: "2024-08-15",
@@ -35,54 +35,57 @@ describe("catalogue", () => {
 });
 
 describe("scoreCore", () => {
-  const base = { season: 2, wants: ["faune"], cost: 1000, minDays: 3, crowd: 0, beachFirst: false } as const;
+  const base = { season: 2, wants: ["faune"], cost: 1000, minDays: 3, idealDays: null, crowd: 0, wish: undefined } as const;
+  const c = { ...neutral, wants: ["faune"] } as Criteria;
 
-  it("donne 100 quand tout colle", () => {
-    expect(scoreCore(base, { ...neutral, wants: ["faune"] }).points).toBe(100);
+  it("donne 90 sans être sur la liste, 100 seulement avec une envie prioritaire", () => {
+    expect(scoreCore(base, c).points).toBe(90);
+    expect(scoreCore({ ...base, wish: wish({ priority: "Très envie" }) }, c).points).toBe(98);
+    expect(scoreCore({ ...base, wish: wish({ priority: "Très envie", kids: "Sans enfants" }) }, c).points).toBe(100);
   });
 
-  it("pondère la saison 32 / 18 / 0", () => {
-    const c = { ...neutral, wants: ["faune"] } as Criteria;
-    expect(scoreCore({ ...base, season: 1 }, c).points).toBe(100 - 32 + 18);
-    expect(scoreCore({ ...base, season: 0 }, c).points).toBe(100 - 32);
+  it("pondère la saison 25 / 12 / 0", () => {
+    expect(scoreCore({ ...base, season: 1 }, c).points).toBe(77);
+    expect(scoreCore({ ...base, season: 0 }, c).points).toBe(65);
   });
 
-  it("donne les points d'envies au prorata, et retire 10 si aucune ne colle", () => {
+  it("donne les envies au prorata, plus 5 si le point fort colle", () => {
     const half = scoreCore(base, { ...neutral, wants: ["faune", "plage"] });
-    expect(half.points).toBeCloseTo(100 - 16.5);
+    expect(half.parts.wants).toBe(15);
     expect(half.hits).toEqual(["faune"]);
-    expect(scoreCore(base, { ...neutral, wants: ["ville"] }).points).toBe(100 - 33 - 10);
+    expect(scoreCore({ ...base, wants: ["nature", "faune"] }, c).parts.wants).toBe(20);
+    expect(scoreCore(base, { ...neutral, wants: ["ville"] }).points).toBe(60);
   });
 
   it("retire 2 points de budget par tranche de 10 % de dépassement", () => {
-    const r = scoreCore({ ...base, cost: 3300 }, neutral);
+    const r = scoreCore({ ...base, cost: 3300 }, c);
     expect(r.over).toBeCloseTo(0.1);
-    expect(r.points).toBeCloseTo(100 - 4);
-    expect(scoreCore({ ...base, cost: 6000 }, neutral).points).toBe(80);
+    expect(r.points).toBeCloseTo(86);
+    expect(scoreCore({ ...base, cost: 6000 }, c).points).toBe(70);
   });
 
-  it("retire 3 points par jour manquant", () => {
-    expect(scoreCore({ ...base, minDays: 12 }, neutral).points).toBe(100 - 6);
-    expect(scoreCore({ ...base, minDays: 30 }, neutral).points).toBe(90);
+  it("gradue le trajet selon la durée du séjour", () => {
+    expect(scoreCore({ ...base, minDays: 6 }, c).parts.trip).toBe(10);
+    expect(scoreCore({ ...base, minDays: 9 }, c).parts.trip).toBe(7);
+    expect(scoreCore({ ...base, minDays: 12 }, c).parts.trip).toBe(3);
   });
 
-  it("ne compte l'affluence que si « peu de monde » est coché", () => {
-    expect(scoreCore({ ...base, crowd: 2 }, neutral).points).toBe(100);
-    expect(scoreCore({ ...base, crowd: 1 }, { ...neutral, rules: ["calm"] }).points).toBe(97);
-    expect(scoreCore({ ...base, crowd: 2 }, { ...neutral, rules: ["calm"] }).points).toBe(95);
+  it("compte toujours le calme, et pénalise la foule si on veut peu de monde", () => {
+    expect(scoreCore({ ...base, crowd: 1 }, c).points).toBe(85);
+    expect(scoreCore({ ...base, crowd: 2 }, c).points).toBe(80);
+    expect(scoreCore({ ...base, crowd: 2 }, { ...c, rules: ["calm"] }).points).toBe(75);
   });
 
   it("pénalise une plage en point fort quand on n'en veut pas", () => {
-    expect(scoreCore({ ...base, beachFirst: true }, { ...neutral, rules: ["noBeach"] }).points).toBe(80);
+    expect(scoreCore({ ...base, wants: ["plage"] }, { ...neutral, rules: ["noBeach"] }).points).toBe(65);
   });
 });
 
 describe("scoreDestination", () => {
-  it("met la Namibie à 100 pour le safari de septembre", () => {
-    const r = scoreDestination(dest("Namibie"), safari);
-    expect(r.cost).toBe(3950);
-    expect(r.minDays).toBe(12);
-    expect(r.score).toBe(100);
+  it("départage les trois safaris de septembre", () => {
+    expect(scoreDestination(dest("Namibie"), safari).score).toBe(87);
+    expect(scoreDestination(dest("Kenya"), safari).score).toBe(85);
+    expect(scoreDestination(dest("Tanzanie"), safari).score).toBe(82);
   });
 
   it("calcule le coût et la durée conseillée selon le trajet", () => {
@@ -92,14 +95,10 @@ describe("scoreDestination", () => {
     expect(minDaysFor(dest("Patagonie"))).toBe(12);
   });
 
-  it("retire 15 points à un voyage déjà fait et ajoute le bonus de priorité", () => {
-    const kenya = dest("Kenya");
-    expect(scoreDestination(kenya, safari).score).toBe(97);
-    expect(scoreDestination(kenya, safari, { trip: trip({ name: "Kenya" }) }).score).toBe(82);
-    expect(scoreDestination(dest("Botswana"), safari, { wish: wish({ priority: "Un jour" }) }).score).toBe(83);
-    expect(scoreDestination(dest("Botswana"), safari, { wish: wish({ priority: "Un jour", kids: "Sans enfants" }) }).score).toBe(87);
-    const sicile = scoreDestination(dest("Sicile"), neutral).score;
-    expect(scoreDestination(dest("Sicile"), neutral, { wish: wish({ priority: "Envie" }) }).score).toBe(Math.min(100, sicile + 6));
+  it("retire 15 points à un voyage déjà fait et compte la priorité de la liste", () => {
+    expect(scoreDestination(dest("Kenya"), safari, { trip: trip({ name: "Kenya" }) }).score).toBe(70);
+    expect(scoreDestination(dest("Botswana"), safari, { wish: wish({ priority: "Un jour" }) }).score).toBe(69);
+    expect(scoreDestination(dest("Botswana"), safari, { wish: wish({ priority: "Un jour", kids: "Sans enfants" }) }).score).toBe(71);
   });
 });
 
@@ -109,8 +108,8 @@ describe("scoreWish", () => {
     const r = scoreWish(w, safari);
     expect(r.season).toBe(2);
     expect(r.wants).toEqual(["faune"]);
-    // 32 + 16.5 + 20 + 10 + 3 + 10
-    expect(r.score).toBe(92);
+    // 25 + 15 + 20 + 10 + 5 + 8
+    expect(r.score).toBe(83);
   });
 
   it("considère la saison correcte sans mois renseigné", () => {
@@ -122,8 +121,8 @@ describe("scoreWish", () => {
 describe("rank", () => {
   it("trie par score décroissant", () => {
     const { results } = rank(safari);
-    const top = results.filter((r) => r.score === 100).map((r) => r.kind === "destination" && r.destination.name);
-    expect(top).toContain("Namibie");
+    // Sans envie sur la liste, personne n'atteint 100 : le score départage vraiment.
+    expect(results.every((r) => r.score < 100)).toBe(true);
     for (let i = 1; i < results.length; i++) expect(results[i - 1].score).toBeGreaterThanOrEqual(results[i].score);
   });
 
@@ -140,8 +139,16 @@ describe("rank", () => {
     expect(isDirect(laponie, [6, 11])).toBe(true);
   });
 
+  it("rattache une envie par son lien Notion en priorité", () => {
+    const wishes = [wish({ id: "a", name: "Notre grand safari", destinationId: dest("Tanzanie").id.replace(/-/g, "") })];
+    const { results } = rank(safari, { wishes, trips: [] });
+    const t = results.find((r) => r.kind === "destination" && r.destination.name === "Tanzanie");
+    expect(t?.kind === "destination" && t.wish?.id).toBe("a");
+    expect(results.some((r) => r.kind === "wish")).toBe(false);
+  });
+
   it("rattache une envie au catalogue, sinon l'ajoute comme carte à part", () => {
-    const wishes = [wish({ id: "a", name: "Safari en Namibie" }), wish({ id: "b", name: "Mongolie" })];
+    const wishes = [wish({ id: "a", name: "Safari en Namibie" }), wish({ id: "b", name: "Kirghizistan" })];
     const { results } = rank(safari, { wishes, trips: [] });
     const namibie = results.find((r) => r.kind === "destination" && r.destination.name === "Namibie");
     expect(namibie?.kind === "destination" && namibie.wish?.id).toBe("a");
@@ -149,7 +156,7 @@ describe("rank", () => {
   });
 
   it("masque les envies « Sans enfants » quand on part avec des enfants", () => {
-    const wishes = [wish({ name: "Mongolie", kids: "Sans enfants" })];
+    const wishes = [wish({ name: "Kirghizistan", kids: "Sans enfants" })];
     expect(rank({ ...neutral, rules: ["kids"] }, { wishes, trips: [] }).results.some((r) => r.kind === "wish")).toBe(false);
     expect(rank(neutral, { wishes, trips: [] }).results.some((r) => r.kind === "wish")).toBe(true);
   });

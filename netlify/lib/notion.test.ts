@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newWishProperties, num, patchProperties, toTrip, toWish, type Page } from "./notion";
+import { newWishProperties, num, parseHighlights, patchProperties, toDestination, toTrip, toWish, type Page } from "./notion";
 
 const rt = (s: string) => [{ plain_text: s }];
 
@@ -18,6 +18,7 @@ const wishPage: Page = {
     "Priorité": { type: "select", select: { name: "Très envie" } },
     "Statut": { type: "select", select: null },
     "Notes": { type: "rich_text", rich_text: rt("Plutôt en 4x4") },
+    "Destination": { type: "relation", relation: [{ id: "dest-1" }] },
   },
 };
 
@@ -40,7 +41,7 @@ describe("lecture Notion", () => {
     expect(toWish(wishPage)).toEqual({
       id: "abc", url: "https://app.notion.com/p/abc", name: "Safari en Namibie", country: "Namibie",
       wants: ["Faune sauvage", "Désert"], bestMonths: [7, 8], idealDays: 15, budget: 4500,
-      kids: "Sans enfants", priority: "Très envie", status: null, notes: "Plutôt en 4x4",
+      kids: "Sans enfants", priority: "Très envie", status: null, notes: "Plutôt en 4x4", destinationId: "dest-1",
     });
   });
 
@@ -70,6 +71,9 @@ describe("écriture Notion", () => {
     expect(props["Statut"]).toEqual({ select: { name: "Idée" } });
     expect(props["Meilleurs mois"]).toEqual({ multi_select: [{ name: "Septembre" }] });
     expect(props["Budget estimé / pers"]).toEqual({ number: 3950 });
+    expect(newWishProperties({ name: "X", destinationId: "405dac8e-ae8e-81d2-b610-c2fff44d7442" })["Destination"])
+      .toEqual({ relation: [{ id: "405dac8e-ae8e-81d2-b610-c2fff44d7442" }] });
+    expect(() => newWishProperties({ name: "X", destinationId: "pas-un-id" })).toThrow("Destination invalide");
   });
 
   it("refuse les options qui n'existent pas dans Notion", () => {
@@ -85,5 +89,47 @@ describe("écriture Notion", () => {
       "Priorité": { select: { name: "Un jour" } },
       "Statut": { select: { name: "Planifié" } },
     });
+  });
+});
+
+describe("catalogue Notion", () => {
+  const page: Page = {
+    id: "c1",
+    url: "https://app.notion.com/p/c1",
+    properties: {
+      "Nom": { type: "title", title: rt("Namibie") },
+      "Pays": { type: "rich_text", rich_text: rt("Namibie") },
+      "Aéroport": { type: "rich_text", rich_text: rt("wdh") },
+      "Heures de vol": { type: "number", number: 13 },
+      "Vol direct": { type: "checkbox", checkbox: false },
+      "Mois du vol direct": { type: "multi_select", multi_select: [] },
+      "Vol A/R": { type: "number", number: 950 },
+      "Budget / jour / pers": { type: "number", number: 200 },
+      "Point fort": { type: "select", select: { name: "Faune sauvage" } },
+      "Envies": { type: "multi_select", multi_select: [{ name: "Désert" }, { name: "Faune sauvage" }] },
+      "Mois idéaux": { type: "multi_select", multi_select: [{ name: "Août" }, { name: "Septembre" }] },
+      "Mois corrects": { type: "multi_select", multi_select: [{ name: "Octobre" }] },
+      "Affluence": { type: "select", select: { name: "Peu fréquenté" } },
+      "Paludisme": { type: "select", select: { name: "En partie" } },
+      "Accroche": { type: "rich_text", rich_text: rt("Dunes et Etosha.") },
+      "Moments forts": { type: "rich_text", rich_text: rt("Septembre : animaux aux points d'eau\nnimporte quoi") },
+      "Sources": { type: "rich_text", rich_text: rt("") },
+    },
+  };
+
+  it("convertit une destination, point fort en premier", () => {
+    const d = toDestination(page)!;
+    expect(d).toMatchObject({
+      id: "c1", name: "Namibie", airport: "WDH", direct: false, directMonths: undefined, flightPrice: 950,
+      dailyBudget: 200, wants: ["faune", "desert"], crowd: 0, malaria: "partiel", highlights: { 8: "animaux aux points d'eau" },
+    });
+    expect(d.season).toEqual([0, 0, 0, 0, 0, 0, 0, 2, 2, 1, 0, 0]);
+  });
+
+  it("garde des valeurs neutres quand une colonne est vide, et ignore une ligne sans nom", () => {
+    const d = toDestination({ id: "x", url: "", properties: { "Nom": { type: "title", title: rt("Ailleurs") } } })!;
+    expect(d).toMatchObject({ flightPrice: 800, dailyBudget: 120, crowd: 1, malaria: false, wants: [] });
+    expect(toDestination({ id: "y", url: "", properties: {} })).toBeNull();
+    expect(parseHighlights("")).toBeUndefined();
   });
 });

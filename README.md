@@ -4,10 +4,22 @@ App perso pour choisir où partir, gérer nos envies de voyage et revoir nos voy
 Interface en français, pensée pour l'iPhone et installable sur l'écran d'accueil.
 
 - **Front** : Vite, React, TypeScript, `vite-plugin-pwa`
-- **Données** : Notion (base « Destinations » et base « Envies de voyage »), lue et modifiée par des Netlify Functions
+- **Données** : Notion (bases « Destinations », « Envies de voyage » et « Catalogue »), lues et modifiées par des Netlify Functions
 - **Hébergement** : Netlify
 
-Le token Notion reste côté serveur. Le navigateur ne parle qu'aux fonctions `/api/voyages` et `/api/envies`, protégées par une phrase secrète.
+Le token Notion reste côté serveur. Le navigateur ne parle qu'aux fonctions `/api/voyages`, `/api/envies` et `/api/catalogue`, protégées par une phrase secrète.
+
+### Le catalogue
+
+Les destinations que l'onglet Choisir classe sont dans la base Notion **Catalogue** (dans le Planificateur de Voyage). Pour en ajouter ou en corriger une, modifie-la dans Notion : l'app la prend au prochain chargement.
+
+- **Mois idéaux / Mois corrects** : les mois non cochés comptent comme mauvaise saison.
+- **Point fort** : l'envie principale du lieu ; **Envies** : les autres.
+- **Vol direct** + **Mois du vol direct** (vide = toute l'année).
+- **Moments forts** : une ligne par mois, par exemple « Septembre : grande migration ».
+- **Sources** : d'où viennent les chiffres.
+
+Dans « Envies de voyage », la colonne **Destination** relie une envie à une ligne du catalogue (sinon l'app essaie avec le nom, puis le pays). `src/data/catalogue.ts` garde une copie de secours pour le premier lancement hors ligne et les tests.
 
 ## Mise en place
 
@@ -63,17 +75,27 @@ npx netlify dev   # front + fonctions, avec NOTION_TOKEN et APP_PASSPHRASE dans 
 ## Organisation
 
 ```
-src/data/catalogue.ts     ~35 destinations : vol, prix, budget/jour, envies, saisonnalité, affluence
+src/data/catalogue.ts     copie de secours du catalogue Notion (50 destinations)
 src/lib/score.ts          score sur 100 (fonction pure, testée)
 src/lib/match.ts          rapprochement catalogue ↔ envies et voyages Notion
 src/shared/types.ts       formes échangées entre les fonctions et l'app
 netlify/lib/notion.ts     appels à l'API Notion (version 2026-03-11, data sources)
-netlify/functions/        voyages.ts (GET), envies.ts (GET, POST, PATCH)
+netlify/functions/        voyages.ts (GET), envies.ts (GET, POST, PATCH), catalogue.ts (GET)
 prototype/                prototype d'origine et directions visuelles
 ```
 
 ### Le score
 
-Sur 100 : saison 32, envies 33, budget 20, durée par rapport au trajet 10, affluence 5.
-Ajustements : −20 si la plage est le point fort alors qu'on n'en veut pas, −10 si aucune envie ne colle,
-−15 si on y est déjà allés, +10 / +6 / +3 si c'est sur la liste d'envies (Très envie / Envie / Un jour).
+Sur 100, chaque critère est gradué :
+
+| Critère | Points | Comment |
+| --- | --- | --- |
+| Saison | 25 | idéale 25, correcte 12, mauvaise 0 (meilleur des mois choisis) |
+| Envies | 25 | 20 au prorata des envies qui collent, +5 si le point fort du lieu en fait partie |
+| Budget | 20 | plein dans le budget, −2 par tranche de 10 % de dépassement |
+| Trajet | 10 | plein si on reste au moins 1,5 × les jours conseillés, 7 si c'est juste, moins en dessous |
+| Calme | 10 | peu fréquenté 10, moyen 5, très fréquenté 0 |
+| Ta liste | 10 | Très envie 8, Envie 5, Un jour 2, sans priorité 4 ; +2 « à faire avant les enfants » |
+
+Pénalités : déjà fait −15, plage en point fort alors qu'on n'en veut pas −20, aucune envie ne colle −5,
+très fréquenté avec « peu de monde » −5, paludisme avec enfants −12 (−5 si seulement une partie du pays).

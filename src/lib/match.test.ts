@@ -15,14 +15,14 @@ describe("match", () => {
   it("retrouve une destination dans un nom libre", () => {
     expect(matchCatalogue("Road trip en Écosse", CATALOGUE)?.name).toBe("Écosse");
     expect(matchCatalogue("Île de la Réunion", CATALOGUE)?.name).toBe("La Réunion");
-    expect(matchCatalogue("Mongolie", CATALOGUE)).toBeUndefined();
+    expect(matchCatalogue("Kirghizistan", CATALOGUE)).toBeUndefined();
   });
 
   it("se rabat sur le pays quand une seule destination s'y trouve", () => {
     expect(matchCatalogue("Mexique", CATALOGUE, "Mexique")?.name).toBe("Yucatán");
     expect(matchCatalogue("Maroc", CATALOGUE, "Maroc")?.name).toBe("Marrakech");
     expect(matchCatalogue("Road trip", CATALOGUE, "Portugal")).toBeUndefined();
-    expect(matchCatalogue("Chili Bolivie", CATALOGUE, "Chili & Bolivie")).toBeUndefined();
+    expect(matchCatalogue("Chili Bolivie", CATALOGUE, "Chili & Bolivie")?.name).toBe("Atacama & Uyuni");
   });
 
   it("prend le voyage visité le plus récent", () => {

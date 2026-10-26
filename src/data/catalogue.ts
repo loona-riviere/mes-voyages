@@ -34,14 +34,22 @@ export type Rule = (typeof RULES)[number]["key"];
 export type Level = 0 | 1 | 2;
 export type Season = readonly [Level, Level, Level, Level, Level, Level, Level, Level, Level, Level, Level, Level];
 
+export type Malaria = boolean | "partiel";
+
 export interface Destination {
+  /** Identifiant de la page Notion du catalogue */
+  id: string;
+  /** Lien vers la page Notion (absent dans la copie de secours) */
+  url?: string;
   name: string;
   country: string;
-  /** Code de l'aéroport d'arrivée, départ Paris CDG */
+  /** Code de l'aéroport d'arrivée, départ Paris */
   airport: string;
-  /** Heures de vol depuis Paris */
+  /** Heures de vol depuis Paris, sans les escales */
   flightHours: number;
   direct: boolean;
+  /** Mois où le vol direct existe (vols saisonniers). Absent : toute l'année si `direct`. */
+  directMonths?: readonly number[];
   /** Vol aller-retour en éco, € par personne */
   flightPrice: number;
   /** Budget sur place, € par jour et par personne */
@@ -53,91 +61,67 @@ export interface Destination {
   /** 0 = peu fréquenté, 2 = très fréquenté */
   crowd: Level;
   pitch: string;
-  /** Mois où le vol direct existe (vols saisonniers). Absent : toute l'année si `direct`. */
-  directMonths?: readonly number[];
   /** Zone de paludisme : « partiel » quand seule une partie du pays est concernée */
-  malaria: boolean | "partiel";
+  malaria: Malaria;
   /** Moments forts par mois (0 = janvier) */
   highlights?: Readonly<Record<number, string>>;
+  sources?: string;
 }
 
-type Row = [string, string, string, number, 0 | 1, number, number, Want[], Season, Level, string];
-
-// [nom, pays, code, heures de vol, direct, vol A/R €, €/jour/pers, envies (1re = point fort), saison J→D, affluence, accroche]
-const ROWS: Row[] = [
-  ["Marrakech", "Maroc", "RAK", 3.3, 1, 180, 95, ["culture", "ville", "gastro", "desert"], [1, 2, 2, 2, 2, 1, 0, 0, 1, 2, 2, 1], 2, "Riads, souks et désert d'Agafay à une heure de route."],
-  ["Lisbonne", "Portugal", "LIS", 2.7, 1, 160, 110, ["ville", "culture", "gastro", "plage"], [0, 1, 1, 2, 2, 2, 1, 1, 2, 2, 1, 0], 2, "Ville lumineuse, cuisine simple et plages de Cascais juste à côté."],
-  ["Tenerife", "Canaries, Espagne", "TFS", 4.3, 1, 220, 100, ["plage", "nature", "rando", "plongee"], [2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 2, 2], 2, "Le soleil d'hiver le plus proche, avec le Teide à gravir."],
-  ["Madère", "Portugal", "FNC", 3.8, 1, 240, 110, ["nature", "rando", "gastro"], [1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1], 1, "Levadas en falaise et forêts de lauriers, climat doux toute l'année."],
-  ["Açores", "Portugal", "PDL", 3.5, 1, 320, 105, ["nature", "rando", "faune", "plongee"], [0, 0, 1, 2, 2, 2, 2, 2, 2, 1, 0, 0], 0, "Volcans, lacs de cratère et observation des baleines."],
-  ["Sicile", "Italie", "CTA", 2.7, 1, 170, 100, ["culture", "gastro", "plage", "nature"], [0, 0, 1, 2, 2, 2, 1, 1, 2, 2, 1, 0], 2, "Etna, temples grecs et cuisine de rue."],
-  ["Crète", "Grèce", "HER", 3.5, 1, 220, 90, ["plage", "rando", "culture", "plongee"], [0, 0, 1, 2, 2, 2, 1, 1, 2, 2, 1, 0], 2, "Gorges à randonner et criques turquoise."],
-  ["Écosse", "Royaume-Uni", "EDI", 1.7, 1, 150, 140, ["nature", "rando", "culture"], [0, 0, 1, 1, 2, 2, 2, 2, 2, 1, 0, 0], 1, "Highlands, îles et distilleries, à moins de deux heures de vol."],
-  ["Islande", "Islande", "KEF", 3.3, 1, 320, 220, ["nature", "rando", "neige"], [1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 0, 1], 1, "Glaciers, cascades et aurores boréales l'hiver."],
-  ["Lofoten", "Norvège", "BOO", 4.5, 0, 380, 190, ["nature", "rando", "neige"], [1, 1, 1, 0, 1, 2, 2, 2, 1, 0, 0, 1], 1, "Pics plongeant dans la mer, randonnées sous le soleil de minuit."],
-  ["Laponie", "Finlande", "RVN", 3.8, 1, 450, 210, ["neige", "nature", "faune"], [2, 2, 2, 0, 0, 1, 1, 0, 1, 0, 0, 2], 1, "Chiens de traîneau, rennes et aurores."],
-  ["Géorgie", "Géorgie", "TBS", 4.8, 1, 320, 70, ["rando", "gastro", "culture", "nature"], [0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 1, 0], 0, "Caucase sauvage, vin en amphore et monastères perchés."],
-  ["Jordanie", "Jordanie", "AMM", 4.8, 1, 400, 130, ["desert", "culture", "rando", "plongee"], [0, 1, 2, 2, 2, 1, 0, 0, 1, 2, 2, 1], 1, "Pétra, Wadi Rum et la mer Rouge à Aqaba."],
-  ["Égypte", "Égypte", "HRG", 4.8, 1, 380, 80, ["culture", "plongee", "desert", "plage"], [2, 2, 2, 2, 1, 0, 0, 0, 1, 2, 2, 2], 2, "Temples du Nil et récifs parmi les plus beaux de la mer Rouge."],
-  ["Oman", "Oman", "MCT", 8.5, 0, 650, 160, ["desert", "nature", "plongee", "plage"], [2, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2, 2], 0, "Fjords de Musandam, wadis et dunes de Wahiba."],
-  ["Ouzbékistan", "Ouzbékistan", "TAS", 6.5, 1, 560, 70, ["culture", "ville", "gastro"], [0, 0, 1, 2, 2, 1, 0, 0, 1, 2, 1, 0], 0, "Samarcande et Boukhara, la route de la soie en mosaïques bleues."],
-  ["Sénégal", "Sénégal", "DSS", 5.5, 1, 480, 85, ["culture", "plage", "nature", "faune"], [2, 2, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2], 0, "Sine Saloum, île de Gorée et lumière douce de l'hiver."],
-  ["Cap-Vert", "Cap-Vert", "SID", 6, 1, 450, 90, ["plage", "rando", "nature"], [2, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2], 1, "Randonnées volcaniques à Santo Antão et plages de Sal."],
-  ["Kenya", "Kenya", "NBO", 8.5, 1, 800, 280, ["faune", "nature"], [2, 2, 1, 0, 0, 1, 2, 2, 2, 2, 1, 2], 1, "Masai Mara et la grande migration de juillet à octobre."],
-  ["Tanzanie", "Tanzanie", "JRO", 9, 1, 900, 300, ["faune", "nature", "plage"], [2, 2, 1, 0, 0, 2, 2, 2, 2, 2, 1, 2], 1, "Serengeti, cratère du Ngorongoro et Kilimandjaro."],
-  ["Namibie", "Namibie", "WDH", 13, 0, 950, 200, ["faune", "desert", "nature"], [0, 0, 1, 1, 2, 2, 2, 2, 2, 1, 1, 0], 0, "Dunes de Sossusvlei, Etosha et grands espaces vides : road trip en autonomie."],
-  ["Botswana", "Botswana", "MUB", 14, 0, 1150, 450, ["faune", "nature"], [0, 0, 0, 1, 1, 2, 2, 2, 2, 2, 1, 0], 0, "Delta de l'Okavango en mokoro, safari très peu fréquenté."],
-  ["Afrique du Sud", "Afrique du Sud", "CPT", 11.5, 1, 900, 160, ["faune", "nature", "gastro", "rando"], [2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2], 1, "Le Cap, les vignobles et un safari dans le Kruger."],
-  ["Madagascar", "Madagascar", "TNR", 11, 1, 950, 110, ["nature", "faune", "plongee", "plage"], [0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], 0, "Lémuriens, baobabs et tsingy, une faune qu'on ne voit nulle part ailleurs."],
-  ["La Réunion", "France", "RUN", 11, 1, 850, 130, ["rando", "nature", "plongee"], [1, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], 1, "Cirques, Piton de la Fournaise et lagon."],
-  ["Guadeloupe", "France", "PTP", 8.5, 1, 600, 130, ["plage", "plongee", "nature"], [2, 2, 2, 2, 1, 1, 1, 0, 0, 1, 1, 2], 1, "Réserve Cousteau, Soufrière et plages de Grande-Terre."],
-  ["Costa Rica", "Costa Rica", "SJO", 11, 1, 800, 140, ["nature", "faune", "rando", "plage"], [2, 2, 2, 2, 1, 0, 1, 1, 0, 0, 1, 2], 1, "Forêts de nuages, volcans et paresseux."],
-  ["Yucatán", "Mexique", "CUN", 11, 1, 750, 120, ["plage", "culture", "plongee"], [2, 2, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2], 2, "Cénotes, cités mayas et mer des Caraïbes."],
-  ["Pérou", "Pérou", "LIM", 12, 1, 950, 110, ["culture", "rando", "nature"], [1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1], 1, "Machu Picchu, Vallée sacrée et lac Titicaca."],
-  ["Patagonie", "Argentine & Chili", "FTE", 17, 0, 1200, 160, ["nature", "rando", "faune"], [2, 2, 2, 1, 0, 0, 0, 0, 0, 1, 2, 2], 0, "Fitz Roy, glacier Perito Moreno et Torres del Paine."],
-  ["Japon", "Japon", "HND", 14, 1, 950, 170, ["culture", "ville", "gastro", "nature"], [1, 1, 2, 2, 2, 0, 0, 0, 1, 2, 2, 1], 2, "Kyoto, Alpes japonaises et onsen, idéal au printemps et à l'automne."],
-  ["Vietnam", "Vietnam", "HAN", 12, 1, 750, 70, ["culture", "gastro", "nature", "plage"], [1, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1], 2, "Baie d'Halong, rizières du Nord et cuisine de rue."],
-  ["Sri Lanka", "Sri Lanka", "CMB", 10.3, 1, 930, 80, ["culture", "nature", "faune", "plage"], [2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2], 1, "Temples, plantations de thé et éléphants de Minneriya."],
-  ["Thaïlande", "Thaïlande", "BKK", 11.5, 1, 700, 80, ["plage", "culture", "gastro", "plongee"], [2, 2, 2, 1, 1, 0, 0, 0, 0, 1, 2, 2], 2, "Îles d'Andaman, temples de Chiang Mai et street food."],
-  ["Indonésie", "Bali & Komodo", "DPS", 17, 0, 950, 90, ["plongee", "plage", "nature", "culture"], [1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1], 2, "Rizières de Bali et plongée avec les raies manta à Komodo."],
+/**
+ * Copie de secours du catalogue Notion (base « Catalogue » du Planificateur de Voyage).
+ * L'app utilise la version Notion dès qu'elle est chargée ; celle-ci sert au premier lancement hors ligne et aux tests.
+ * Données vérifiées en octobre 2026, voir docs/sources.md.
+ */
+export const CATALOGUE: readonly Destination[] = [
+  { id: "405dac8e-ae8e-810d-89bb-ee063e582e33", name: "Marrakech", country: "Maroc", airport: "RAK", flightHours: 3.3, direct: true, flightPrice: 180, dailyBudget: 95, wants: ["culture", "ville", "gastro", "desert"], season: [1, 2, 2, 2, 2, 1, 0, 0, 1, 2, 2, 1], crowd: 2, pitch: "Riads, souks et désert d'Agafay à une heure de route.", malaria: false, sources: "Confort 60-100 €/jour : L'Heure du voyage, Morocco Escape." },
+  { id: "405dac8e-ae8e-81d9-b2ae-c97372e19a47", name: "Lisbonne", country: "Portugal", airport: "LIS", flightHours: 2.7, direct: true, flightPrice: 160, dailyBudget: 100, wants: ["ville", "culture", "gastro", "plage"], season: [0, 1, 1, 2, 2, 2, 1, 1, 2, 2, 1, 0], crowd: 2, pitch: "Ville lumineuse, cuisine simple et plages de Cascais juste à côté.", malaria: false, sources: "Portugal 70-100 €/jour milieu de gamme : L'Itinéraire." },
+  { id: "405dac8e-ae8e-817c-b4d3-ef4f4db5eacd", name: "Tenerife", country: "Canaries, Espagne", airport: "TFS", flightHours: 4.3, direct: true, flightPrice: 220, dailyBudget: 100, wants: ["plage", "nature", "rando", "plongee"], season: [2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 2, 2], crowd: 2, pitch: "Le soleil d'hiver le plus proche, avec le Teide à gravir.", malaria: false, sources: "Espagne 75-110 €/jour : L'Itinéraire." },
+  { id: "405dac8e-ae8e-812a-a6fa-f15ec4723ae6", name: "Madère", country: "Portugal", airport: "FNC", flightHours: 3.8, direct: true, flightPrice: 240, dailyBudget: 110, wants: ["nature", "rando", "gastro"], season: [1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1], crowd: 1, pitch: "Levadas en falaise et forêts de lauriers, climat doux toute l'année.", malaria: false, directMonths: [3, 4, 5, 6, 7, 8, 9], sources: "Vols directs l'été seulement : Partir.com." },
+  { id: "405dac8e-ae8e-81b3-a353-c98ef312d3ed", name: "Açores", country: "Portugal", airport: "PDL", flightHours: 3.5, direct: true, flightPrice: 320, dailyBudget: 105, wants: ["nature", "rando", "faune", "plongee"], season: [0, 0, 1, 2, 2, 2, 2, 2, 2, 1, 0, 0], crowd: 0, pitch: "Volcans, lacs de cratère et observation des baleines.", malaria: false, directMonths: [5, 6, 7, 8, 9], sources: "Vols directs SATA l'été seulement : Partir.com." },
+  { id: "405dac8e-ae8e-8175-8a84-c7787b47005c", name: "Sicile", country: "Italie", airport: "CTA", flightHours: 2.7, direct: true, flightPrice: 170, dailyBudget: 100, wants: ["culture", "gastro", "plage", "nature"], season: [0, 0, 1, 2, 2, 2, 1, 1, 2, 2, 1, 0], crowd: 2, pitch: "Etna, temples grecs et cuisine de rue.", malaria: false, sources: "Prototype d'origine (non vérifié)" },
+  { id: "405dac8e-ae8e-813a-8070-eddfebdf19e7", name: "Crète", country: "Grèce", airport: "HER", flightHours: 3.5, direct: true, flightPrice: 220, dailyBudget: 90, wants: ["plage", "rando", "culture", "plongee"], season: [0, 0, 1, 2, 2, 2, 1, 1, 2, 2, 1, 0], crowd: 2, pitch: "Gorges à randonner et criques turquoise.", malaria: false, sources: "Grèce 65-95 €/jour : L'Itinéraire." },
+  { id: "405dac8e-ae8e-8192-af93-ff3c94ff3931", name: "Écosse", country: "Royaume-Uni", airport: "EDI", flightHours: 1.7, direct: true, flightPrice: 150, dailyBudget: 140, wants: ["nature", "rando", "culture"], season: [0, 0, 1, 1, 2, 2, 2, 2, 2, 1, 0, 0], crowd: 1, pitch: "Highlands, îles et distilleries, à moins de deux heures de vol.", malaria: false, sources: "Prototype d'origine (non vérifié)" },
+  { id: "405dac8e-ae8e-81bc-98c7-f4f1cba7ba6f", name: "Islande", country: "Islande", airport: "KEF", flightHours: 3.3, direct: true, flightPrice: 320, dailyBudget: 180, wants: ["nature", "rando", "neige"], season: [1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 0, 1], crowd: 1, pitch: "Glaciers, cascades et aurores boréales l'hiver.", malaria: false, sources: "Budget 140-200 €/jour : Iambeezy, e-locations-vacances." },
+  { id: "405dac8e-ae8e-8160-a64e-c66e4d74ad72", name: "Lofoten", country: "Norvège", airport: "BOO", flightHours: 4.5, direct: false, flightPrice: 380, dailyBudget: 190, wants: ["nature", "rando", "neige"], season: [1, 1, 1, 0, 1, 2, 2, 2, 1, 0, 0, 1], crowd: 1, pitch: "Pics plongeant dans la mer, randonnées sous le soleil de minuit.", malaria: false, sources: "Pays nordiques 150-250 €/jour : e-locations-vacances." },
+  { id: "405dac8e-ae8e-819d-bc63-fcf2779fa223", name: "Laponie", country: "Finlande", airport: "RVN", flightHours: 3.8, direct: true, flightPrice: 450, dailyBudget: 210, wants: ["neige", "nature", "faune"], season: [2, 2, 2, 0, 0, 1, 1, 0, 1, 0, 0, 2], crowd: 1, pitch: "Chiens de traîneau, rennes et aurores.", malaria: false, directMonths: [0, 1, 2, 11], sources: "Finnair direct l'hiver : Aviation & Defence Universe." },
+  { id: "405dac8e-ae8e-8137-9d81-fe412e381de4", name: "Géorgie", country: "Géorgie", airport: "TBS", flightHours: 4.8, direct: true, flightPrice: 320, dailyBudget: 65, wants: ["rando", "gastro", "culture", "nature"], season: [0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 1, 0], crowd: 0, pitch: "Caucase sauvage, vin en amphore et monastères perchés.", malaria: false, directMonths: [5, 6, 7, 8, 9], sources: "Quelques vols directs, pas au printemps : Partir.com. ~70 $/jour : advised-traveler." },
+  { id: "405dac8e-ae8e-81e4-809f-ce08ecffb2bb", name: "Jordanie", country: "Jordanie", airport: "AMM", flightHours: 4.8, direct: true, flightPrice: 400, dailyBudget: 130, wants: ["desert", "culture", "rando", "plongee"], season: [0, 1, 2, 2, 2, 1, 0, 0, 1, 2, 2, 1], crowd: 1, pitch: "Pétra, Wadi Rum et la mer Rouge à Aqaba.", malaria: false, sources: "Budget ~135 $/jour milieu de gamme : advised-traveler." },
+  { id: "405dac8e-ae8e-81c5-8b90-ec12f1e7b4a8", name: "Égypte", country: "Égypte", airport: "HRG", flightHours: 4.8, direct: true, flightPrice: 380, dailyBudget: 80, wants: ["culture", "plongee", "desert", "plage"], season: [2, 2, 2, 2, 1, 0, 0, 0, 1, 2, 2, 2], crowd: 2, pitch: "Temples du Nil et récifs parmi les plus beaux de la mer Rouge.", malaria: false, sources: "Confort 60-100 €/jour : Globe-trotting." },
+  { id: "405dac8e-ae8e-8122-b121-fd9ec40ac5ce", name: "Oman", country: "Oman", airport: "MCT", flightHours: 8.5, direct: false, flightPrice: 650, dailyBudget: 135, wants: ["desert", "nature", "plongee", "plage"], season: [2, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2, 2], crowd: 0, pitch: "Fjords de Musandam, wadis et dunes de Wahiba.", malaria: false, sources: "~145 $/jour milieu de gamme : advised-traveler." },
+  { id: "405dac8e-ae8e-8162-a13f-d1c2b94bb689", name: "Ouzbékistan", country: "Ouzbékistan", airport: "TAS", flightHours: 6.5, direct: true, flightPrice: 560, dailyBudget: 55, wants: ["culture", "ville", "gastro"], season: [0, 0, 1, 2, 2, 1, 0, 0, 1, 2, 1, 0], crowd: 0, pitch: "Samarcande et Boukhara, la route de la soie en mosaïques bleues.", malaria: false, sources: "30-45 €/jour (petit budget) : Globe-trotting." },
+  { id: "405dac8e-ae8e-819c-9751-d1854bdb933c", name: "Sénégal", country: "Sénégal", airport: "DSS", flightHours: 5.5, direct: true, flightPrice: 480, dailyBudget: 70, wants: ["culture", "plage", "nature", "faune"], season: [2, 2, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2], crowd: 0, pitch: "Sine Saloum, île de Gorée et lumière douce de l'hiver.", malaria: true, sources: "Confort 50-80 €/jour : Globe-trotting." },
+  { id: "405dac8e-ae8e-81ec-88d8-c15c73e44268", name: "Cap-Vert", country: "Cap-Vert", airport: "SID", flightHours: 6, direct: true, flightPrice: 450, dailyBudget: 100, wants: ["plage", "rando", "nature"], season: [2, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2], crowd: 1, pitch: "Randonnées volcaniques à Santo Antão et plages de Sal.", malaria: false, sources: "70-140 €/jour : Secrets du monde." },
+  { id: "405dac8e-ae8e-810e-8781-d594ff826926", name: "Kenya", country: "Kenya", airport: "NBO", flightHours: 8.5, direct: true, flightPrice: 800, dailyBudget: 280, wants: ["faune", "nature"], season: [2, 2, 1, 0, 0, 1, 2, 2, 2, 2, 1, 2], crowd: 1, pitch: "Masai Mara et la grande migration de juillet à octobre.", malaria: true, highlights: {6: "Arrivée de la grande migration au Masai Mara", 7: "Grande migration : traversées de la rivière Mara, pic fin août – septembre", 8: "Grande migration : traversées de la rivière Mara, pic fin août – septembre", 9: "Fin de la migration au Masai Mara"}, sources: "Migration : Imara, Pixidia, Travel Butlers. Frais Masai Mara jusqu'à 200 $/jour : Elitravel." },
+  { id: "405dac8e-ae8e-81b0-8ff5-ff698c68a9a5", name: "Tanzanie", country: "Tanzanie", airport: "JRO", flightHours: 9, direct: true, flightPrice: 900, dailyBudget: 300, wants: ["faune", "nature", "plage"], season: [2, 2, 1, 0, 0, 2, 2, 2, 2, 2, 1, 2], crowd: 1, pitch: "Serengeti, cratère du Ngorongoro et Kilimandjaro.", malaria: true, highlights: {0: "Naissances des gnous dans le sud du Serengeti", 1: "Pic des naissances dans le sud du Serengeti", 5: "Traversées de la Grumeti, ouest du Serengeti", 6: "Migration dans le nord du Serengeti", 7: "Grande migration : traversées de la rivière Mara, pic fin août – septembre", 8: "Grande migration : traversées de la rivière Mara, pic fin août – septembre"}, sources: "Vol direct Air France ~9 h : FlightConnections. Parcs ~70-118 $/jour : Safarifind." },
+  { id: "405dac8e-ae8e-81d2-b610-c2fff44d7442", name: "Namibie", country: "Namibie", airport: "WDH", flightHours: 13, direct: false, flightPrice: 950, dailyBudget: 200, wants: ["faune", "desert", "nature"], season: [0, 0, 1, 1, 2, 2, 2, 2, 2, 1, 1, 0], crowd: 0, pitch: "Dunes de Sossusvlei, Etosha et grands espaces vides : road trip en autonomie.", malaria: "partiel", highlights: {6: "Nuits froides, animaux aux points d'eau d'Etosha", 7: "Animaux concentrés aux points d'eau d'Etosha", 8: "Animaux concentrés à Etosha, journées chaudes", 9: "Très chaud, fin de la saison sèche"}, sources: "Saisons : Go2Africa, Lonely Planet. Pas de vol direct : Google Flights. Budget : Safarifind." },
+  { id: "405dac8e-ae8e-8102-8040-d2637bfab72a", name: "Botswana", country: "Botswana", airport: "MUB", flightHours: 14, direct: false, flightPrice: 1150, dailyBudget: 450, wants: ["faune", "nature"], season: [0, 0, 0, 1, 1, 2, 2, 2, 2, 2, 1, 0], crowd: 0, pitch: "Delta de l'Okavango en mokoro, safari très peu fréquenté.", malaria: true, sources: "Prototype d'origine (non vérifié)" },
+  { id: "405dac8e-ae8e-81ab-8eb6-e2aeb5430165", name: "Afrique du Sud", country: "Afrique du Sud", airport: "CPT", flightHours: 11.5, direct: true, flightPrice: 900, dailyBudget: 160, wants: ["faune", "nature", "gastro", "rando"], season: [2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2], crowd: 1, pitch: "Le Cap, les vignobles et un safari dans le Kruger.", malaria: "partiel", sources: "Prototype d'origine (non vérifié)" },
+  { id: "405dac8e-ae8e-810d-954a-ed5463fdde49", name: "Madagascar", country: "Madagascar", airport: "TNR", flightHours: 11, direct: true, flightPrice: 950, dailyBudget: 110, wants: ["nature", "faune", "plongee", "plage"], season: [0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], crowd: 0, pitch: "Lémuriens, baobabs et tsingy, une faune qu'on ne voit nulle part ailleurs.", malaria: true, sources: "Confort 50-150 €/jour selon les sources : Kokoa Serena, Globe-trotting." },
+  { id: "405dac8e-ae8e-8100-9187-fe439a90f942", name: "La Réunion", country: "France", airport: "RUN", flightHours: 11, direct: true, flightPrice: 850, dailyBudget: 160, wants: ["rando", "nature", "plongee"], season: [1, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], crowd: 1, pitch: "Cirques, Piton de la Fournaise et lagon.", malaria: false, sources: "Confort ~2 700 € pour 10 j vol compris : Air Vacances. Classée par Lonely Planet 2026." },
+  { id: "405dac8e-ae8e-81ae-a07e-f912d12ff6d6", name: "Guadeloupe", country: "France", airport: "PTP", flightHours: 8.5, direct: true, flightPrice: 600, dailyBudget: 140, wants: ["plage", "plongee", "nature"], season: [2, 2, 2, 2, 1, 1, 1, 0, 0, 1, 1, 2], crowd: 1, pitch: "Réserve Cousteau, Soufrière et plages de Grande-Terre.", malaria: false, sources: "Confort 120-180 €/jour : Vacances en Guadeloupe." },
+  { id: "405dac8e-ae8e-811c-95e2-c570c7adb796", name: "Costa Rica", country: "Costa Rica", airport: "SJO", flightHours: 11, direct: true, flightPrice: 800, dailyBudget: 120, wants: ["nature", "faune", "rando", "plage"], season: [2, 2, 2, 2, 1, 0, 1, 1, 0, 0, 1, 2], crowd: 1, pitch: "Forêts de nuages, volcans et paresseux.", malaria: false, sources: "Budget confort 90-150 $/jour : Tourdumondiste." },
+  { id: "405dac8e-ae8e-81bf-be78-fb78325e2fc2", name: "Yucatán", country: "Mexique", airport: "CUN", flightHours: 11, direct: true, flightPrice: 750, dailyBudget: 120, wants: ["plage", "culture", "plongee"], season: [2, 2, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2], crowd: 2, pitch: "Cénotes, cités mayas et mer des Caraïbes.", malaria: false, sources: "Prototype d'origine (non vérifié)" },
+  { id: "405dac8e-ae8e-818e-b1b7-cf2aaea5bc9e", name: "Pérou", country: "Pérou", airport: "LIM", flightHours: 12, direct: true, flightPrice: 950, dailyBudget: 80, wants: ["culture", "rando", "nature"], season: [1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1], crowd: 1, pitch: "Machu Picchu, Vallée sacrée et lac Titicaca.", malaria: false, sources: "Intermédiaire 60-100 €/jour : Visiter Pérou, Tourdumondiste." },
+  { id: "405dac8e-ae8e-81f0-b734-c577a8b1048b", name: "Patagonie", country: "Argentine & Chili", airport: "FTE", flightHours: 17, direct: false, flightPrice: 1200, dailyBudget: 160, wants: ["nature", "rando", "faune"], season: [2, 2, 2, 1, 0, 0, 0, 0, 0, 1, 2, 2], crowd: 0, pitch: "Fitz Roy, glacier Perito Moreno et Torres del Paine.", malaria: false, sources: "Prototype d'origine (non vérifié)" },
+  { id: "405dac8e-ae8e-81d9-a4ee-dbcf0f9709cb", name: "Japon", country: "Japon", airport: "HND", flightHours: 14, direct: true, flightPrice: 950, dailyBudget: 130, wants: ["culture", "ville", "gastro", "nature"], season: [1, 1, 2, 2, 2, 0, 0, 0, 1, 2, 2, 1], crowd: 2, pitch: "Kyoto, Alpes japonaises et onsen, idéal au printemps et à l'automne.", malaria: false, sources: "Budget 80-150 €/jour sur place : ojapon, e-locations-vacances." },
+  { id: "405dac8e-ae8e-8186-b53c-fafc97a0b905", name: "Vietnam", country: "Vietnam", airport: "HAN", flightHours: 12, direct: true, flightPrice: 750, dailyBudget: 60, wants: ["culture", "gastro", "nature", "plage"], season: [1, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1], crowd: 2, pitch: "Baie d'Halong, rizières du Nord et cuisine de rue.", malaria: false, sources: "Budget confort 45-65 €/jour : Tourdumondiste, Envole-moi." },
+  { id: "405dac8e-ae8e-8182-a5b2-c7eebe8b74bc", name: "Sri Lanka", country: "Sri Lanka", airport: "CMB", flightHours: 10.3, direct: true, flightPrice: 930, dailyBudget: 80, wants: ["culture", "nature", "faune", "plage"], season: [2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2], crowd: 1, pitch: "Temples, plantations de thé et éléphants de Minneriya.", malaria: false, sources: "Vol direct SriLankan ~10 h 15, dès ~930 € : SriLankan, Partir.com." },
+  { id: "405dac8e-ae8e-811d-9a9f-c88b81826eff", name: "Thaïlande", country: "Thaïlande", airport: "BKK", flightHours: 11.5, direct: true, flightPrice: 700, dailyBudget: 80, wants: ["plage", "culture", "gastro", "plongee"], season: [2, 2, 2, 1, 1, 0, 0, 0, 0, 1, 2, 2], crowd: 2, pitch: "Îles d'Andaman, temples de Chiang Mai et street food.", malaria: false, sources: "Confort 60-90 €/jour : Tourdumondiste, Envole-moi." },
+  { id: "405dac8e-ae8e-8128-ad33-f37088df606a", name: "Indonésie", country: "Bali & Komodo", airport: "DPS", flightHours: 17, direct: false, flightPrice: 950, dailyBudget: 90, wants: ["plongee", "plage", "nature", "culture"], season: [1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1], crowd: 2, pitch: "Rizières de Bali et plongée avec les raies manta à Komodo.", malaria: "partiel", sources: "Bali 70-100 €/jour en mode vacances : L'Heure du voyage." },
+  { id: "405dac8e-ae8e-8104-863d-e0f95ed3ecba", name: "Népal", country: "Népal", airport: "KTM", flightHours: 11, direct: false, flightPrice: 760, dailyBudget: 50, wants: ["rando", "culture", "nature"], season: [1, 1, 2, 2, 1, 0, 0, 0, 1, 2, 2, 1], crowd: 1, pitch: "Treks de l'Annapurna ou de l'Everest, temples de la vallée de Katmandou.", malaria: "partiel", sources: "Vol A/R moyen ~760 € : ou-et-quand. Budget 40-55 €/jour : Katmandou.com, Exiap." },
+  { id: "405dac8e-ae8e-81aa-a002-c2bb0a5f8a25", name: "Atacama & Uyuni", country: "Chili & Bolivie", airport: "CJC", flightHours: 16, direct: false, flightPrice: 1100, dailyBudget: 60, wants: ["desert", "nature", "rando"], season: [1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1], crowd: 0, pitch: "Geysers, lagunes colorées et le salar d'Uyuni, à plus de 3 500 m.", malaria: false, sources: "Budget médian Chili 53 €/jour, Bolivie 35 €/jour : Tourdumondiste. Vol estimé." },
+  { id: "405dac8e-ae8e-81cc-8978-fdf505898022", name: "Galápagos", country: "Équateur", airport: "GPS", flightHours: 13, direct: false, flightPrice: 1300, dailyBudget: 280, wants: ["faune", "plongee", "nature"], season: [2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2], crowd: 1, pitch: "Otaries, tortues géantes et requins-marteaux, une faune qui n'a pas peur de l'homme.", malaria: false, highlights: {0: "Mer chaude et calme", 6: "Eaux froides, vie marine la plus riche"}, sources: "Parc 200 $, vols îles 250-600 $, 200-450 $/jour sur les îles : Galapagos Insiders. Vol Paris-Quito : Liligo, Trip.com." },
+  { id: "405dac8e-ae8e-8169-b854-c6e5d8d152d2", name: "Rocheuses canadiennes", country: "Canada", airport: "YVR", flightHours: 10, direct: false, flightPrice: 1100, dailyBudget: 160, wants: ["nature", "faune", "rando"], season: [0, 0, 0, 0, 1, 2, 2, 2, 2, 1, 0, 0], crowd: 1, pitch: "Lacs turquoise de Banff et Jasper, ours et wapitis au bord des routes.", malaria: false, sources: "Vol 450-800 € l'aller : Canada Explorers. Budget 130-200 €/jour : Voyage-Canada. Colombie-Britannique classée par Lonely Planet 2026." },
+  { id: "405dac8e-ae8e-818f-85ed-c37c6692ca37", name: "Fjords de Norvège", country: "Norvège", airport: "BGO", flightHours: 2, direct: false, flightPrice: 250, dailyBudget: 180, wants: ["nature", "rando"], season: [0, 0, 0, 0, 1, 2, 2, 2, 1, 0, 0, 0], crowd: 1, pitch: "Preikestolen, Geirangerfjord et villages de pêcheurs au bord de l'eau.", malaria: false, sources: "Budget nordique 150-250 €/jour : e-locations-vacances. Vol estimé." },
+  { id: "405dac8e-ae8e-819e-b2aa-d5752138f4a1", name: "Cappadoce & Lycie", country: "Turquie", airport: "IST", flightHours: 3.3, direct: true, flightPrice: 250, dailyBudget: 65, wants: ["culture", "rando", "plage", "gastro"], season: [0, 0, 1, 2, 2, 2, 1, 1, 2, 2, 1, 0], crowd: 2, pitch: "Montgolfières sur la Cappadoce et sentier lycien au-dessus de la mer.", malaria: false, sources: "Budget 50-75 €/jour : L'Itinéraire, Iambeezy. Vol estimé." },
+  { id: "405dac8e-ae8e-8165-8792-fed92feeeb9d", name: "Andalousie", country: "Espagne", airport: "SVQ", flightHours: 2, direct: true, flightPrice: 150, dailyBudget: 90, wants: ["culture", "gastro", "ville"], season: [1, 1, 2, 2, 2, 1, 0, 0, 1, 2, 1, 1], crowd: 2, pitch: "Alhambra de Grenade, mosquée de Cordoue et villages blancs.", malaria: false, sources: "Espagne ~70-110 €/jour : L'Itinéraire. Vol estimé." },
+  { id: "405dac8e-ae8e-816a-86b0-d4c16c64b1f0", name: "Sardaigne", country: "Italie", airport: "CAG", flightHours: 2, direct: true, flightPrice: 180, dailyBudget: 110, wants: ["plage", "nature", "gastro", "rando"], season: [0, 0, 0, 1, 2, 2, 1, 1, 2, 1, 0, 0], crowd: 1, pitch: "Criques turquoise, sentiers du Supramonte et villages de bergers.", malaria: false, directMonths: [4, 5, 6, 7, 8, 9], sources: "Classée par Lonely Planet 2026. Budget et vols directs estimés, à vérifier." },
+  { id: "405dac8e-ae8e-81ab-926a-d3965a043fe1", name: "Mongolie", country: "Mongolie", airport: "ULN", flightHours: 11, direct: false, flightPrice: 900, dailyBudget: 80, wants: ["nature", "faune", "desert", "rando"], season: [0, 0, 0, 0, 1, 2, 2, 2, 1, 0, 0, 0], crowd: 0, pitch: "Steppes à perte de vue, nuits en yourte et désert de Gobi.", malaria: false, highlights: {6: "Naadam, fête nationale mi-juillet"}, sources: "Budget moyen ~69 €/jour : A contresens. Vol estimé." },
+  { id: "405dac8e-ae8e-81b2-8bfc-ccd7669a5cd0", name: "Ouganda", country: "Ouganda", airport: "EBB", flightHours: 10, direct: false, flightPrice: 850, dailyBudget: 300, wants: ["faune", "nature", "rando"], season: [2, 2, 1, 0, 0, 2, 2, 2, 2, 1, 1, 2], crowd: 0, pitch: "Gorilles de Bwindi, chimpanzés de Kibale et lions grimpeurs.", malaria: true, sources: "Permis gorilles 600-800 $ : Safarifind. Vol estimé." },
+  { id: "405dac8e-ae8e-8112-8d7f-dafa4c1f547c", name: "Slovénie", country: "Slovénie", airport: "LJU", flightHours: 2, direct: true, flightPrice: 180, dailyBudget: 100, wants: ["nature", "rando", "ville"], season: [0, 0, 0, 1, 2, 2, 2, 2, 2, 1, 0, 0], crowd: 1, pitch: "Lac de Bled, Alpes juliennes et rivière Soča émeraude.", malaria: false, sources: "Top 10 Europe 2027 du Routard. Budget 80-140 €/jour : BalkanTripGuide. Vol direct à vérifier." },
+  { id: "405dac8e-ae8e-8121-ae3b-e60108d0738a", name: "Albanie", country: "Albanie", airport: "TIA", flightHours: 2.5, direct: true, flightPrice: 180, dailyBudget: 55, wants: ["plage", "nature", "rando", "culture"], season: [0, 0, 0, 1, 2, 2, 1, 1, 2, 1, 0, 0], crowd: 1, pitch: "Riviera albanaise, villes ottomanes de Berat et Gjirokastër, montagnes du nord.", malaria: false, sources: "Budget 45-75 €/jour : L'Itinéraire, BalkanTripGuide. Vol direct à vérifier." },
+  { id: "405dac8e-ae8e-8109-bd1d-c058bbe8ce7f", name: "Palawan", country: "Philippines", airport: "PPS", flightHours: 16, direct: false, flightPrice: 950, dailyBudget: 60, wants: ["plongee", "plage", "nature"], season: [2, 2, 2, 2, 1, 0, 0, 0, 0, 1, 1, 2], crowd: 1, pitch: "Lagons d'El Nido, épaves de Coron et îles désertes.", malaria: "partiel", sources: "Vol Paris-Manille ~900 € : ou-et-quand. Budget médian 45 €/jour : Tourdumondiste." },
+  { id: "405dac8e-ae8e-8118-841d-fb33971cd8c9", name: "Colombie", country: "Colombie", airport: "BOG", flightHours: 11, direct: true, flightPrice: 800, dailyBudget: 55, wants: ["culture", "nature", "rando", "plage"], season: [2, 2, 2, 1, 1, 1, 2, 2, 1, 0, 0, 2], crowd: 1, pitch: "Cartagena colorée, vallée de Cocora et ses palmiers géants, région du café.", malaria: "partiel", sources: "Budget 40-55 €/jour : Tourdumondiste, Voyage7continents. Classée par Lonely Planet 2026. Vol estimé." },
+  { id: "405dac8e-ae8e-8179-98cb-cd9ac335f8b3", name: "Nouvelle-Zélande", country: "Nouvelle-Zélande", airport: "AKL", flightHours: 24, direct: false, flightPrice: 1600, dailyBudget: 120, wants: ["nature", "rando", "faune"], season: [2, 2, 2, 1, 0, 0, 0, 0, 0, 1, 2, 2], crowd: 1, pitch: "Volcans, fjords et randonnées mythiques, de l'île du Nord à l'île du Sud.", malaria: false, sources: "Vol dès ~1 530 € : Air France. Budget 90-130 €/jour : Envole-moi. Île du Nord classée par Lonely Planet 2026." },
 ];
-
-const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
-const MIGRATION_MARA = "Grande migration : traversées de la rivière Mara, pic fin août – septembre";
-
-// Compléments vérifiés en octobre 2026 (vols directs, paludisme, moments forts). Voir docs/sources.md.
-type Extra = Partial<Pick<Destination, "directMonths" | "malaria" | "highlights">>;
-const EXTRAS: Record<string, Extra> = {
-  PDL: { directMonths: range(5, 9) },
-  FNC: { directMonths: range(3, 9) },
-  RVN: { directMonths: [0, 1, 2, 11] },
-  TBS: { directMonths: range(5, 9) },
-  DSS: { malaria: true },
-  NBO: {
-    malaria: true,
-    highlights: { 6: "Arrivée de la grande migration au Masai Mara", 7: MIGRATION_MARA, 8: MIGRATION_MARA, 9: "Fin de la migration au Masai Mara" },
-  },
-  JRO: {
-    malaria: true,
-    highlights: {
-      0: "Naissances des gnous dans le sud du Serengeti", 1: "Pic des naissances dans le sud du Serengeti",
-      5: "Traversées de la Grumeti, ouest du Serengeti", 6: "Migration dans le nord du Serengeti",
-      7: MIGRATION_MARA, 8: MIGRATION_MARA,
-    },
-  },
-  WDH: {
-    malaria: "partiel",
-    highlights: { 6: "Nuits froides, animaux aux points d'eau d'Etosha", 7: "Animaux concentrés aux points d'eau d'Etosha", 8: "Animaux concentrés à Etosha, journées chaudes", 9: "Très chaud, fin de la saison sèche" },
-  },
-  MUB: { malaria: true },
-  CPT: { malaria: "partiel" },
-  TNR: { malaria: true },
-  DPS: { malaria: "partiel" },
-};
-
-export const CATALOGUE: readonly Destination[] = ROWS.map(
-  ([name, country, airport, flightHours, direct, flightPrice, dailyBudget, wants, season, crowd, pitch]) => ({
-    name, country, airport, flightHours, direct: direct === 1, flightPrice, dailyBudget, wants, season, crowd, pitch,
-    malaria: false, ...EXTRAS[airport],
-  }),
-);

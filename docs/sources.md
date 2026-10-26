@@ -1,5 +1,7 @@
 # Sources des données (vérifiées en octobre 2026)
 
+Le catalogue vit dans la base Notion « Catalogue » ; chaque ligne a sa colonne Sources. Ce fichier regroupe les liens.
+
 Les chiffres du catalogue sont des estimations pour un départ de Paris. À revérifier avant de réserver.
 
 ## Safari
@@ -23,3 +25,16 @@ Les chiffres du catalogue sont des estimations pour un départ de Paris. À rev�
 - Afrique subsaharienne en zone de risque, sauf le sud de la Namibie, le Botswana (sud) et l'Afrique du Sud hors nord-est (Kruger à risque). Risque faible dans la plupart des destinations touristiques d'Asie.
   [Recommandations sanitaires aux voyageurs 2025](https://production-apollon-documents.s3.fr-par.scw.cloud/dwyzx2mzkhbzg4p194jnld851e2q), [Le Moniteur des pharmacies 2026](https://www.lemoniteurdespharmacies.fr/nouvelles-missions/vaccination/voyageurs-ce-qui-change-dans-les-recommandations-2026)
 - Toujours demander l'avis d'un médecin du voyage, surtout avec des enfants.
+
+## Budgets par jour (milieu de gamme, sur place)
+- Europe : [L'Itinéraire](https://www.l-itineraire.com/voyage-pratique/budget-voyage-europe-par-pays), [Iambeezy](https://blog.iambeezy.app/fr/combien-coute-voyage-europe-par-pays-budget-jour-2026/), [BalkanTripGuide](https://balkantripguide.com/balkans-travel-budget/), [e-locations-vacances](https://www.e-locations-vacances.fr/budget-voyage-jour-pays-cher-pas-cher-estimation/)
+- Asie : [Tourdumondiste Asie du Sud-Est](https://www.tourdumondiste.com/budget-voyage-asie-du-sud-est), [L'Heure du voyage Indonésie](https://lheureduvoyage.com/destinations/indonesie/pratique/budget/), [ojapon](https://www.ojapon.com/blog/budget-voyage-japon-2026), [Katmandou.com](https://katmandou.com/guides/budget-voyage-nepal), [A contresens Mongolie](https://planificateur.a-contresens.net/budget-pays-MN-mongolie.html)
+- Amériques : [Tourdumondiste Amérique du Sud](https://www.tourdumondiste.com/budget-voyage-amerique-du-sud), [Visiter Pérou](https://www.visiter-perou.fr/pratique/budget-perou/), [Voyage-Canada](https://www.voyage-canada.com/blog/budget-voyage-canada-3-semaines-2026/), [Galapagos Insiders](https://galapagosinsiders.com/travel-blog/galapagos-cruise-cost-2026/)
+- Afrique et outre-mer : [L'Heure du voyage Maroc](https://lheureduvoyage.com/destinations/maroc/pratique/budget/), [Globe-trotting](https://www.globe-trotting.com/post/pays-les-moins-chers-pour-voyager), [Secrets du monde Cap-Vert](https://www.secretsdumonde.com/prix-dun-voyage-au-cap-vert-vols-circuits-sejours-hotels/), [Kokoa Serena Madagascar](https://kokoaserena.com/blog/budget-voyage-madagascar/), [Vacances en Guadeloupe](https://vacances-en-guadeloupe.com/blog/budget-voyage-guadeloupe-combien-prevoir-en-2026/), [Air Vacances Réunion](https://www.airvacances.fr/budget-voyage-reunion/), [Safarifind Ouganda](https://safarifind.com/fr/blog/uganda-safari-cost-in-2026-gorilla-permits-lodges-and-flights)
+- Simulateur en dollars : [advised-traveler](https://advised-traveler.com/en/travel-budget-calculator/)
+
+## Classements
+- [Lonely Planet Best in Travel 2026](https://www.globeaware.org/news/globe-aware-news/2170-the-best-places-to-travel-in-2026-according-to-lonely-planet), [Routard top 10 Europe 2027](https://www.routard.com/fr/mag/dossier/a/ou-partir-en-2027-top-10-des-meilleures-destinations-en-europe)
+
+## À revérifier
+Lignes marquées « Prototype d'origine (non vérifié) » dans Notion (Sicile, Écosse, Botswana, Afrique du Sud, Yucatán, Patagonie) et vols marqués « estimé » ou « à vérifier ».

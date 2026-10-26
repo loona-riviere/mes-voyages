@@ -1,4 +1,4 @@
-import { MONTHS, WANTS } from "../../src/data/catalogue";
+import { MONTHS, WANT_FROM_LABEL, WANTS, type Destination, type Level, type Want } from "../../src/data/catalogue";
 import {
   PRIORITIES, WISH_STATUSES,
   type Kids, type NewWish, type Priority, type Trip, type TripStatus, type Wish, type WishPatch, type WishStatus,
@@ -7,6 +7,7 @@ import {
 export const NOTION_VERSION = "2026-03-11";
 export const TRIPS_DATA_SOURCE = "8195c0cd-68d2-408e-afce-409b3f113982";
 export const WISHES_DATA_SOURCE = "f84d6097-98c1-4b04-8fa9-bb7bcd36b7a4";
+export const CATALOGUE_DATA_SOURCE = "9a6e6864-ed0d-44b8-8846-663a6b5b8dca";
 
 const WANT_LABELS: readonly string[] = WANTS.map((w) => w.label);
 const KIDS: readonly Kids[] = ["Sans enfants", "Avec enfants"];
@@ -127,6 +128,19 @@ export function num(p: Page, name: string): number | null {
   return null;
 }
 
+export function relationIds(p: Page, name: string): string[] {
+  const v = get(p, name);
+  return v?.type === "relation" ? (v.relation as { id: string }[]).map((r) => r.id) : [];
+}
+
+export function checkbox(p: Page, name: string): boolean {
+  const v = get(p, name);
+  return v?.type === "checkbox" ? Boolean(v.checkbox) : false;
+}
+
+const monthIndexes = (names: string[]) =>
+  names.map((m) => (MONTHS as readonly string[]).indexOf(m)).filter((i) => i >= 0).sort((a, b) => a - b);
+
 export function dateRange(p: Page, name: string): { start: string | null; end: string | null } {
   const v = get(p, name);
   const d = v?.type === "date" ? (v.date as { start: string; end: string | null } | null) : null;
@@ -143,16 +157,59 @@ export function toWish(p: Page): Wish {
     name: text(p, "Nom"),
     country: text(p, "Pays"),
     wants: options(p, "Envies"),
-    bestMonths: options(p, "Meilleurs mois")
-      .map((m) => (MONTHS as readonly string[]).indexOf(m))
-      .filter((i) => i >= 0)
-      .sort((a, b) => a - b),
+    bestMonths: monthIndexes(options(p, "Meilleurs mois")),
     idealDays: num(p, "Durée idéale (jours)"),
     budget: num(p, "Budget estimé / pers"),
     kids: oneOf(KIDS, option(p, "Enfants")),
     priority: oneOf(PRIORITIES, option(p, "Priorité")),
     status: oneOf(WISH_STATUSES, option(p, "Statut")),
     notes: text(p, "Notes"),
+    destinationId: relationIds(p, "Destination")[0] ?? null,
+  };
+}
+
+const CROWD: Record<string, Level> = { "Peu fréquenté": 0, "Moyenne": 1, "Très fréquenté": 2 };
+
+/** « Septembre : grande migration » sur chaque ligne → { 8: "grande migration" } */
+export function parseHighlights(raw: string): Record<number, string> | undefined {
+  const out: Record<number, string> = {};
+  for (const line of raw.split("\n")) {
+    const m = line.match(/^\s*([^:]+?)\s*:\s*(.+)$/);
+    const i = m ? (MONTHS as readonly string[]).indexOf(m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase()) : -1;
+    if (m && i >= 0) out[i] = m[2].trim();
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** Destination du catalogue Notion. Les valeurs manquantes prennent une valeur neutre plutôt que de faire planter l'app. */
+export function toDestination(p: Page): Destination | null {
+  const name = text(p, "Nom").trim();
+  if (!name) return null;
+  const ideal = monthIndexes(options(p, "Mois idéaux"));
+  const ok = monthIndexes(options(p, "Mois corrects"));
+  const season = MONTHS.map((_, i) => (ideal.includes(i) ? 2 : ok.includes(i) ? 1 : 0)) as unknown as Destination["season"];
+  const strong = WANT_FROM_LABEL[option(p, "Point fort") ?? ""];
+  const others = options(p, "Envies").map((l) => WANT_FROM_LABEL[l]).filter((w): w is Want => !!w && w !== strong);
+  const directMonths = monthIndexes(options(p, "Mois du vol direct"));
+  const malaria = option(p, "Paludisme");
+  return {
+    id: p.id,
+    url: p.url,
+    name,
+    country: text(p, "Pays"),
+    airport: text(p, "Aéroport").toUpperCase(),
+    flightHours: num(p, "Heures de vol") ?? 8,
+    direct: checkbox(p, "Vol direct"),
+    directMonths: directMonths.length ? directMonths : undefined,
+    flightPrice: num(p, "Vol A/R") ?? 800,
+    dailyBudget: num(p, "Budget / jour / pers") ?? 120,
+    wants: strong ? [strong, ...others] : others,
+    season,
+    crowd: CROWD[option(p, "Affluence") ?? ""] ?? 1,
+    pitch: text(p, "Accroche"),
+    malaria: malaria === "Oui" ? true : malaria === "En partie" ? "partiel" : false,
+    highlights: parseHighlights(text(p, "Moments forts")),
+    sources: text(p, "Sources") || undefined,
   };
 }
 
@@ -220,6 +277,10 @@ export function newWishProperties(input: NewWish): Record<string, unknown> {
   const budget = positive(input.budget, "Budget");
   if (budget !== null) props["Budget estimé / pers"] = { number: budget };
   if (input.kids) props["Enfants"] = sel(check(KIDS, input.kids, "Enfants"));
+  if (input.destinationId) {
+    if (!/^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(input.destinationId)) throw new InvalidInput("Destination invalide");
+    props["Destination"] = { relation: [{ id: input.destinationId }] };
+  }
   return props;
 }
 

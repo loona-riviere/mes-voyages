@@ -19,7 +19,8 @@ export function Sheet({ open, title, onClose, children, footer }: Props) {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
     body.current?.scrollTo(0, 0);
-    const t = setTimeout(() => closeBtn.current?.focus(), 60);
+    // Focus sur la feuille elle-même (pas sur la croix, qui afficherait un anneau sur iPhone).
+    const t = setTimeout(() => sheet.current?.focus({ preventScroll: true }), 60);
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     document.documentElement.classList.add("sheet-open");
@@ -57,6 +58,7 @@ export function Sheet({ open, title, onClose, children, footer }: Props) {
       <div
         ref={sheet}
         className={`sheet${open ? " on" : ""}`}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}

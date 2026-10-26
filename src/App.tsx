@@ -35,7 +35,7 @@ export function App() {
   const openWish = useCallback((id: string) => setWishId(id), []);
   const closeCrit = useCallback(() => setCritOpen(false), []);
   const closeWish = useCallback(() => setWishId(null), []);
-  const count = useMemo(() => rank(criteria, { wishes: notion.wishes, trips: notion.trips }).results.length, [criteria, notion.wishes, notion.trips]);
+  const count = useMemo(() => rank(criteria, notion).results.length, [criteria, notion]);
 
   if (notion.state === "locked") return <Unlock onUnlock={notion.unlock} error={notion.error} />;
 

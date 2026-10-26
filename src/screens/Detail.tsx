@@ -4,14 +4,10 @@ import { ScoreBreakdown, scoreRows } from "../components/ScoreBreakdown";
 import { SeasonDots } from "../components/SeasonDots";
 import { ProsCons } from "../components/ResultCard";
 import { euros, flightTime } from "../lib/format";
-import { explain, highlight, prosCons, rank, type Criteria, type Result } from "../lib/score";
+import { explain, highlight, rank, type Criteria, type Result } from "../lib/score";
 import type { Trip, Wish } from "../shared/types";
+import type { Destination } from "../data/catalogue";
 import { skyGradient } from "../lib/sky";
-
-function ProsList({ r, c, kind }: { r: Result; c: Criteria; kind: "pros" | "cons" }) {
-  const items = prosCons(r, c)[kind];
-  return items.length ? <>{items.map((t) => <small key={t} className={kind}>{kind === "pros" ? "+ " : "− "}{t}</small>)}</> : <>—</>;
-}
 
 export const resultKey = (r: Result) => (r.kind === "destination" ? r.destination.airport : r.wish.id);
 export const resultName = (r: Result) => (r.kind === "destination" ? r.destination.name : r.wish.name);
@@ -111,7 +107,7 @@ interface CompareProps {
   open: boolean;
   results: Result[];
   criteria: Criteria;
-  notion: { wishes: readonly Wish[]; trips: readonly Trip[] };
+  notion: { wishes: readonly Wish[]; trips: readonly Trip[]; catalogue?: readonly Destination[] };
   onClose: () => void;
   onRemove: (key: string) => void;
 }
@@ -127,7 +123,7 @@ function MonthByMonth({ results, criteria: c, notion }: { results: Result[]; cri
     <section>
       <div className="lbl">Score selon le mois</div>
       <table className="cmp mbm">
-        <thead><tr><th />{results.map((r) => <th key={resultKey(r)} scope="col">{resultName(r)}</th>)}</tr></thead>
+        <thead><tr><th />{results.map((r) => <th key={resultKey(r)} scope="col">{shortName(r)}</th>)}</tr></thead>
         <tbody>
           {grid.map((row, m) => {
             const top = Math.max(...row);
@@ -145,59 +141,111 @@ function MonthByMonth({ results, criteria: c, notion }: { results: Result[]; cri
   );
 }
 
+const shortName = (r: Result) => resultName(r).split(/[ &]/)[0];
+
+/** Un critère, une barre par destination : on voit d'un coup d'œil qui gagne. */
+function CriterionBars({ label, max, items }: { label: string; max: number; items: { key: string; name: string; value: number; note: string }[] }) {
+  const top = Math.max(...items.map((i) => i.value));
+  return (
+    <div className="crit">
+      <div className="crit-h"><span>{label}</span><small>sur {max}</small></div>
+      {items.map((i) => (
+        <div key={i.key} className={`crit-row${i.value === top ? " win" : ""}`}>
+          <span className="crit-name">{i.name}</span>
+          <span className="crit-bar"><i style={{ transform: `scaleX(${Math.max(0, i.value) / max})` }} /></span>
+          <b>{Math.round(i.value)}</b>
+          <small className="crit-note">{i.note}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function CompareSheet({ open, results, criteria: c, notion, onClose, onRemove }: CompareProps) {
   const rows = results.map((r) => scoreRows(r, c));
-  const best = (vals: number[]) => Math.max(...vals);
-  const line = (label: string, cells: (r: Result, i: number) => React.ReactNode) => (
-    <tr><th scope="row">{label}</th>{results.map((r, i) => <td key={resultKey(r)}>{cells(r, i)}</td>)}</tr>
-  );
-  const scoreLine = (k: number) => {
+  const bestScore = Math.max(...results.map((r) => r.score));
+  // Critères où les destinations diffèrent d'au moins 1 point, les plus discriminants d'abord.
+  const criteria = (rows[0] ?? []).map((row, k) => {
     const vals = rows.map((rw) => rw[k].value);
-    return (
-      <tr key={k}>
-        <th scope="row">{rows[0]?.[k].label} <small>/ {rows[0]?.[k].max}</small></th>
-        {results.map((r, i) => (
-          <td key={resultKey(r)} className={vals[i] === best(vals) && vals.some((v) => v !== vals[i]) ? "win" : ""}>
-            {Math.round(vals[i])}
-            <small>{rows[i][k].note}</small>
-          </td>
-        ))}
-      </tr>
-    );
-  };
+    return { k, label: row.label, max: row.max, spread: Math.max(...vals) - Math.min(...vals) };
+  });
+  const differing = criteria.filter((x) => x.spread >= 1).sort((a, b) => b.spread - a.spread);
+  const tied = criteria.filter((x) => x.spread < 1);
+  const withAdjustments = results.filter((r) => r.parts.adjustments.length);
+
+  const fact = (label: string, cell: (r: Result) => React.ReactNode) => (
+    <tr><th scope="row">{label}</th>{results.map((r) => <td key={resultKey(r)}>{cell(r)}</td>)}</tr>
+  );
+
   return (
     <Sheet open={open} title="Comparer" onClose={onClose}>
       {results.length < 2 ? (
         <p className="empty">Ajoute au moins deux destinations avec « Comparer ».</p>
       ) : (
         <div className="cmp-wrap">
-          <table className="cmp">
-            <thead>
-              <tr>
-                <th />
-                {results.map((r) => (
-                  <th key={resultKey(r)} scope="col">
-                    <span className="cmp-name">{resultName(r)}</span>
-                    <button className="cmp-x" onClick={() => onRemove(resultKey(r))} aria-label={`Retirer ${resultName(r)}`}>×</button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="cmp-total">
-                <th scope="row">Score</th>
-                {results.map((r) => <td key={resultKey(r)} className={r.score === Math.max(...results.map((x) => x.score)) ? "win" : ""}>{r.score}</td>)}
-              </tr>
-              {[0, 1, 2, 3, 4].map(scoreLine)}
-              {line("Points forts", (r) => <ProsList r={r} c={c} kind="pros" />)}
-              {line("Points faibles", (r) => <ProsList r={r} c={c} kind="cons" />)}
-              {line("Bonus / malus", (r) => r.parts.adjustments.length ? r.parts.adjustments.map((a) => <small key={a.label}>{a.points > 0 ? "+" : "−"}{Math.abs(a.points)} {a.label}</small>) : "—")}
-              {line("Coût / pers.", (r) => (r.cost != null ? `≈ ${euros(r.cost)}` : "—"))}
-              {line("Vol", (r) => (r.kind === "destination" ? <>{flightTime(r.destination.flightHours)}<small>{r.direct ? "direct" : "avec escale"}</small></> : "—"))}
-              {line("Paludisme", (r) => (r.kind === "destination" ? (r.destination.malaria === true ? "Oui" : r.destination.malaria ? "En partie" : "Non") : "—"))}
-              {line("À ne pas manquer", (r) => highlight(r) ?? "—")}
-            </tbody>
-          </table>
+          <div className="cmp-scores" style={{ gridTemplateColumns: `repeat(${results.length}, 1fr)` }}>
+            {results.map((r) => (
+              <div key={resultKey(r)} className={`cmp-score${r.score === bestScore ? " best" : ""}`}>
+                <button className="cmp-x" onClick={() => onRemove(resultKey(r))} aria-label={`Retirer ${resultName(r)}`}>×</button>
+                <span className="cmp-name">{resultName(r)}</span>
+                <b>{r.score}</b>
+                {r.score === bestScore && <small>en tête</small>}
+              </div>
+            ))}
+          </div>
+
+          <section>
+            <div className="lbl">Ce qui les départage</div>
+            {differing.length === 0 && <p className="hint">Elles font jeu égal sur tous les critères : regarde les infos pratiques et la saison.</p>}
+            <div className="crits">
+              {differing.map(({ k, label, max }) => (
+                <CriterionBars
+                  key={k}
+                  label={label}
+                  max={max}
+                  items={results.map((r, i) => ({ key: resultKey(r), name: shortName(r), value: rows[i][k].value, note: rows[i][k].note }))}
+                />
+              ))}
+              {withAdjustments.length > 0 && (
+                <div className="crit">
+                  <div className="crit-h"><span>Pénalités</span></div>
+                  {withAdjustments.map((r) => (
+                    <p key={resultKey(r)} className="crit-adj">
+                      <b>{shortName(r)}</b> {r.parts.adjustments.map((a) => `${a.points > 0 ? "+" : "−"}${Math.abs(a.points)} ${a.label.toLowerCase()}`).join(", ")}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+            {tied.length > 0 && <p className="hint">À égalité : {tied.map((t) => t.label.toLowerCase()).join(", ")}.</p>}
+          </section>
+
+          <section>
+            <div className="lbl">Infos pratiques</div>
+            <div className="cmp-table">
+              <table className="cmp">
+                <thead><tr><th />{results.map((r) => <th key={resultKey(r)} scope="col">{shortName(r)}</th>)}</tr></thead>
+                <tbody>
+                  {fact("Coût / pers.", (r) => (r.cost != null ? `≈ ${euros(r.cost)}` : "—"))}
+                  {fact("Vol", (r) => (r.kind === "destination" ? <>{flightTime(r.destination.flightHours)}<small>{r.direct ? "direct" : "avec escale"}</small></> : "—"))}
+                  {fact("Jours conseillés", (r) => (r.kind === "destination" ? `${r.minDays} j` : r.idealDays ? `${r.idealDays} j` : "—"))}
+                  {fact("Sur place", (r) => (r.kind === "destination" ? `${r.destination.dailyBudget} €/j` : "—"))}
+                  {fact("Affluence", (r) => (r.kind === "destination" ? ["Faible", "Moyenne", "Forte"][r.destination.crowd] : "—"))}
+                  {fact("Paludisme", (r) => (r.kind === "destination" ? (r.destination.malaria === true ? "Oui" : r.destination.malaria ? "En partie" : "Non") : "—"))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {results.some((r) => highlight(r)) && (
+            <section>
+              <div className="lbl">À ne pas manquer en {MONTHS[results[0].month].toLowerCase()}{c.months.length > 1 ? " (meilleur mois de chacune)" : ""}</div>
+              <ul className="hl-list">
+                {results.map((r) => highlight(r) && <li key={resultKey(r)} className="on"><b>{shortName(r)}</b> {highlight(r)}</li>)}
+              </ul>
+            </section>
+          )}
+
           <MonthByMonth results={results} criteria={c} notion={notion} />
           <div className="cmp-seasons">
             {results.map((r) => (

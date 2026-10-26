@@ -23,6 +23,8 @@ export interface Wish {
   priority: Priority | null;
   status: WishStatus | null;
   notes: string;
+  /** Page du catalogue liée dans Notion (propriété « Destination ») */
+  destinationId: string | null;
 }
 
 export interface Trip {
@@ -50,6 +52,8 @@ export interface NewWish {
   priority?: Priority;
   status?: WishStatus;
   notes?: string;
+  /** Page du catalogue à relier (propriété « Destination ») */
+  destinationId?: string | null;
 }
 
 export interface WishPatch {

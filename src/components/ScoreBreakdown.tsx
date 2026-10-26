@@ -12,19 +12,31 @@ export function scoreRows(r: Result, c: Criteria) {
     { label: "Saison", value: p.season, max: WEIGHTS.season, note: r.kind === "wish" && !r.wish.bestMonths.length ? "pas de mois dans Notion" : `${SEASON[r.season]} en ${month}` },
     {
       label: "Envies", value: p.wants, max: WEIGHTS.wants,
-      note: c.wants.length ? (r.hits.length ? r.hits.map((h) => WANT_LABEL[h]).join(", ") : "aucune ne colle") : "aucune envie choisie",
+      note: !c.wants.length ? "aucune envie choisie" : !r.hits.length ? "aucune ne colle" :
+        `${r.hits.map((h) => WANT_LABEL[h]).join(", ")}${(r.kind === "destination" ? r.destination.wants[0] : r.wants[0]) && c.wants.includes((r.kind === "destination" ? r.destination.wants[0] : r.wants[0])!) ? " (dont le point fort)" : ""}`,
     },
     {
       label: "Budget", value: p.budget, max: WEIGHTS.budget,
       note: r.cost == null ? "pas de budget dans Notion" : r.over > 0 ? `≈ ${euros(r.cost)}, ${Math.round(r.over * 100)} % au-dessus` : `≈ ${euros(r.cost)}, dans le budget`,
     },
     {
-      label: "Durée", value: p.duration, max: WEIGHTS.duration,
-      note: r.kind === "destination" ? `${r.minDays} j conseillés pour ce trajet` : r.idealDays ? `${r.idealDays} j idéal (Notion)` : "pas de durée dans Notion",
+      label: "Trajet", value: p.trip, max: WEIGHTS.trip,
+      note: r.kind === "destination"
+        ? `${r.minDays} j conseillés, plein à partir de ${Math.ceil(r.minDays * 1.5)} j`
+        : r.idealDays ? `${r.idealDays} j idéal (Notion)` : "pas de durée dans Notion",
     },
     {
-      label: "Calme", value: p.crowd, max: WEIGHTS.crowd,
-      note: !c.rules.includes("calm") ? "non demandé, points offerts" : r.kind === "destination" ? ["peu fréquenté", "affluence moyenne", "très fréquenté"][r.destination.crowd] : "inconnu",
+      label: "Calme", value: p.calm, max: WEIGHTS.calm,
+      note: r.kind === "destination" ? ["peu fréquenté", "affluence moyenne", "très fréquenté"][r.destination.crowd] : "affluence inconnue",
+    },
+    {
+      label: "Ta liste", value: p.list, max: WEIGHTS.list,
+      note: (() => {
+        const w = r.kind === "destination" ? r.wish : r.wish;
+        if (!w) return "pas dans tes envies";
+        const kids = w.kids === "Sans enfants" && !c.rules.includes("kids") ? ", à faire avant les enfants" : "";
+        return `${w.priority ?? "sans priorité"}${kids}`;
+      })(),
     },
   ];
 }

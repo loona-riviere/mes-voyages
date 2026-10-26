@@ -116,8 +116,8 @@ export function Choose({ criteria, notion, toast, onOpenWish }: Props) {
   const [picked, setPicked] = useState<string[]>([]);
   const [comparing, setComparing] = useState(false);
   const { results, hiddenNotDirect } = useMemo(
-    () => rank(criteria, { wishes: notion.wishes, trips: notion.trips }),
-    [criteria, notion.wishes, notion.trips],
+    () => rank(criteria, notion),
+    [criteria, notion.wishes, notion.trips, notion.catalogue],
   );
 
   const add = async (r: DestinationResult) => {
@@ -134,6 +134,7 @@ export function Choose({ criteria, notion, toast, onOpenWish }: Props) {
         priority: "Envie",
         status: "Idée",
         notes: d.pitch,
+        destinationId: d.id,
       });
       toast(sent ? `${d.name} ajouté à tes envies` : `${d.name} ajouté, envoyé à Notion au retour du réseau`);
     } catch (e) {
@@ -199,7 +200,7 @@ export function Choose({ criteria, notion, toast, onOpenWish }: Props) {
         open={comparing}
         results={pickedResults}
         criteria={criteria}
-        notion={{ wishes: notion.wishes, trips: notion.trips }}
+        notion={notion}
         onClose={() => setComparing(false)}
         onRemove={(k) => setPicked(picked.filter((x) => x !== k))}
       />

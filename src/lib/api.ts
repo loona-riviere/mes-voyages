@@ -1,3 +1,4 @@
+import type { Destination } from "../data/catalogue";
 import type { NewWish, Trip, Wish, WishPatch } from "../shared/types";
 
 const PASS_KEY = "mv-passphrase";
@@ -48,6 +49,7 @@ export const api = {
   },
   wishes: async () => (await call<{ wishes: Wish[] }>("envies")).wishes,
   trips: async () => (await call<{ trips: Trip[] }>("voyages")).trips,
+  catalogue: async () => (await call<{ destinations: Destination[] }>("catalogue")).destinations,
   addWish: async (w: NewWish) => (await call<{ wish: Wish }>("envies", { method: "POST", body: w })).wish,
   patchWish: async (id: string, patch: WishPatch) =>
     (await call<{ wish: Wish }>("envies", { method: "PATCH", body: { id, ...patch } })).wish,
@@ -60,6 +62,8 @@ const CACHE_KEY = "mv-cache-v1";
 export interface Cached {
   wishes: Wish[];
   trips: Trip[];
+  /** Absent dans les caches d'avant le catalogue Notion */
+  catalogue?: Destination[];
   at: number;
 }
 
