@@ -195,10 +195,7 @@ export function useNotion(): NotionData {
   /** Crée ou met à jour un projet (en ligne seulement). Un projet archivé disparaît de la liste. */
   const saveProject = useCallback(async (input: ProjectInput, id?: string) => {
     const saved = id ? await api.patchProject(id, input) : await api.addProject(input);
-    setProjects((prev) => {
-      const others = prev.filter((p) => p.id !== saved.id);
-      return saved.status === "Archivé" ? others : id ? prev.map((p) => (p.id === id ? saved : p)) : [...prev, saved];
-    });
+    setProjects((prev) => (id ? prev.map((p) => (p.id === id ? saved : p)) : [...prev, saved]));
     return saved;
   }, []);
 

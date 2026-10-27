@@ -338,6 +338,7 @@ export function projectProperties(input: ProjectInput, creating: boolean): Recor
   if (input.budget !== undefined) props["Budget / pers"] = { number: positive(input.budget, "Budget") };
   if (input.wants !== undefined) props["Envies"] = { multi_select: input.wants.map((w) => ({ name: WANT_LABEL[check(WANT_KEYS as readonly Want[], w, "Envies")] })) };
   if (input.rules !== undefined) props["Contraintes"] = { multi_select: input.rules.map((r) => ({ name: RULE_LABEL[check(RULE_KEYS as readonly Rule[], r, "Contraintes")] })) };
+  if (input.notes !== undefined) props["Notes"] = { rich_text: rich(String(input.notes)) };
   if (input.status !== undefined || creating) props["Statut"] = sel(check(PROJECT_STATUSES, input.status ?? "À choisir", "Statut"));
   if (!Object.keys(props).length) throw new InvalidInput("Rien à modifier");
   return props;

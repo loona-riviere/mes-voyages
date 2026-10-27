@@ -83,6 +83,7 @@ export interface ProjectInput {
   wants?: Want[];
   rules?: Rule[];
   status?: ProjectStatus;
+  notes?: string;
 }
 
 export interface WishPatch {

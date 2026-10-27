@@ -9,9 +9,9 @@ import { Choose, ChooseHeader, CriteriaSheet } from "./screens/Choose";
 import { Trips } from "./screens/Trips";
 import { Unlock } from "./screens/Unlock";
 import { NO_FILTER, Wishes, WishesHeader, WishSheet, type WishFilter } from "./screens/Wishes";
-import { applyProject, ProjectSheet, ProjectsRow, type ProjectSheetState } from "./screens/Projects";
+import { applyProject, ProjectForm, ProjectSheet, ProjectsRow, ProjectsTab, type ProjectSheetState } from "./screens/Projects";
 
-const TITLES: Record<Tab, string> = { choose: "Où partir ?", wishes: "Envies", trips: "Voyages faits" };
+const TITLES: Record<Tab, string> = { choose: "Où partir ?", wishes: "Envies", projects: "Projets", trips: "Voyages faits" };
 
 export function App() {
   const notion = useNotion();
@@ -22,6 +22,7 @@ export function App() {
   const [filter, setFilter] = useState<WishFilter>(NO_FILTER);
   const [scrolled, setScrolled] = useState(false);
   const [projectSheet, setProjectSheet] = useState<ProjectSheetState>(null);
+  const [projectForm, setProjectForm] = useState<ProjectSheetState>(null);
   const [toastNode, toast] = useToast();
 
   useEffect(() => {
@@ -62,7 +63,7 @@ export function App() {
           {tab === "choose" && (
             <>
               <ProjectsRow
-                projects={notion.projects}
+                projects={notion.projects.filter((p) => p.status !== "Archivé")}
                 criteria={criteria}
                 onApply={(p) => { setCriteria(applyProject(p, criteria)); toast(p.name); }}
                 onEdit={(p) => setProjectSheet({ mode: "edit", id: p.id })}
@@ -84,10 +85,19 @@ export function App() {
           )}
           {tab === "choose" && <Choose criteria={criteria} setCriteria={setCriteria} notion={notion} toast={toast} onOpenWish={(id) => { go("wishes"); openWish(id); }} />}
           {tab === "wishes" && <Wishes notion={notion} filter={filter} setFilter={setFilter} onOpen={openWish} />}
+          {tab === "projects" && (
+            <ProjectsTab
+              notion={notion}
+              onApply={(p) => { setCriteria(applyProject(p, criteria)); go("choose"); toast(p.name); }}
+              onEdit={(p) => setProjectForm({ mode: "edit", id: p.id })}
+              onNew={() => setProjectForm({ mode: "new" })}
+            />
+          )}
           {tab === "trips" && <Trips notion={notion} />}
         </main>
       </div>
       <TabBar tab={tab} onChange={go} wishCount={notion.wishes.length} />
+      <ProjectForm state={projectForm} onClose={() => setProjectForm(null)} notion={notion} toast={toast} />
       <ProjectSheet state={projectSheet} onClose={() => setProjectSheet(null)} criteria={criteria} notion={notion} toast={toast} />
       <CriteriaSheet open={critOpen} onClose={closeCrit} criteria={criteria} setCriteria={setCriteria} count={count} />
       <WishSheet wish={notion.wishes.find((w) => w.id === wishId) ?? null} onClose={closeWish} notion={notion} toast={toast} />

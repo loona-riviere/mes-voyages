@@ -158,7 +158,7 @@ main { padding: 4px var(--gutter-r) 24px var(--gutter-l); }
   border-top: 1px solid var(--line);
   padding: 6px var(--gutter-r) calc(6px + env(safe-area-inset-bottom, 0px)) var(--gutter-l);
 }
-.tabbar-in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); }
+.tabbar-in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); }
 .tab { display: grid; justify-items: center; gap: 2px; font: 600 11px var(--body); color: var(--muted); background: none; border: 0; padding: 5px 0 3px; position: relative; }
 .tab svg { width: 25px; height: 25px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .tab[aria-current="page"] { color: var(--accent); }
@@ -317,3 +317,24 @@ input[type="range"] { width: 100%; accent-color: var(--accent); height: 30px; ma
 .crit-adj { margin: 0; font-size: 13px; color: var(--over); }
 .crit-adj b { color: var(--ink); margin-right: 4px; }
 .cmp-table { overflow-x: auto; }
+
+/* ---------- Onglet Projets ---------- */
+.proj { background: var(--surface); box-shadow: var(--shadow); border-radius: 18px; padding: 14px; display: grid; gap: 10px; }
+.proj.done { box-shadow: inset 0 0 0 2px var(--accent), var(--shadow); }
+.proj-top { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+.proj h3 { margin: 0; font: 400 20px/1.15 var(--display); }
+.proj-status { font: 600 11px var(--body); padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); white-space: nowrap; }
+.proj.done .proj-status { background: var(--accent); color: var(--on-accent); }
+.proj-facts { display: flex; flex-wrap: wrap; gap: 6px; }
+.proj-facts span { font-size: 13px; background: var(--bg); border-radius: 8px; padding: 4px 9px; }
+.proj-notes { margin: 0; font-size: 13.5px; color: var(--muted); }
+.proj-actions { display: flex; gap: 8px; }
+.proj-actions .btn { flex: 1; padding: 10px 12px; font-size: 14px; }
+.group-h { font: 400 17px var(--display); color: var(--muted); padding: 10px 0 0; }
+.fold { border: 0; background: none; padding: 8px 0; font: 600 13.5px var(--body); color: var(--accent-ink); text-align: left; }
+.add-proj { border: 1px dashed var(--line); border-radius: 16px; padding: 14px; background: none; color: var(--accent-ink); font: 600 15px var(--body); }
+.textarea { min-height: 84px; resize: vertical; font: 500 15px/1.4 var(--body); }
+.num-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mini-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.mini-months button { font: 600 13px var(--body); padding: 9px 0; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; }
+.mini-months button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }

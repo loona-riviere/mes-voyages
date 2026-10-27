@@ -22,7 +22,7 @@ export default async (req: Request) => {
   try {
     switch (req.method) {
       case "GET": {
-        const projects = (await queryAll(PROJECTS_DATA_SOURCE)).map(toProject).filter((p) => p.status !== "Archivé" && p.name);
+        const projects = (await queryAll(PROJECTS_DATA_SOURCE)).map(toProject).filter((p) => p.name);
         return json({ projects });
       }
       case "POST": {
