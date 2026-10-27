@@ -42,6 +42,66 @@ export interface Trip {
   dailyPerPerson: number | null;
 }
 
+export type TransportType = "Avion" | "Train" | "Bus" | "Voiture" | "Moto" | "Vélo" | "Taxi" | "Bateau";
+export type LodgingType = "Hôtel" | "Appartement" | "Aparthotel" | "Maison" | "Chambre d'hôtes" | "Auberge" | "Airbnb" | "Booking";
+export const TRANSPORT_TYPES: readonly TransportType[] = ["Avion", "Train", "Bus", "Voiture", "Moto", "Vélo", "Taxi", "Bateau"];
+export const LODGING_TYPES: readonly LodgingType[] = ["Hôtel", "Appartement", "Aparthotel", "Maison", "Chambre d'hôtes", "Auberge", "Airbnb", "Booking"];
+
+/** Un vol, un train… relié à un voyage. */
+export interface Transport {
+  id: string;
+  url: string;
+  tripId: string | null;
+  name: string;
+  type: TransportType | null;
+  company: string;
+  /** AAAA-MM-JJ ou AAAA-MM-JJThh:mm */
+  start: string | null;
+  end: string | null;
+  reference: string;
+  cost: number | null;
+}
+
+export interface Lodging {
+  id: string;
+  url: string;
+  tripId: string | null;
+  name: string;
+  type: LodgingType | null;
+  address: string;
+  start: string | null;
+  end: string | null;
+  cost: number | null;
+}
+
+export interface TransportInput {
+  tripId: string;
+  name: string;
+  type?: TransportType | null;
+  company?: string;
+  start?: string | null;
+  end?: string | null;
+  reference?: string;
+  cost?: number | null;
+}
+
+export interface LodgingInput {
+  tripId: string;
+  name: string;
+  type?: LodgingType | null;
+  address?: string;
+  start?: string | null;
+  end?: string | null;
+  cost?: number | null;
+}
+
+export interface TripInput {
+  name?: string;
+  status?: TripStatus;
+  start?: string | null;
+  end?: string | null;
+}
+
 export interface NewWish {
   name: string;
   country?: string;

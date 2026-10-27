@@ -338,3 +338,13 @@ input[type="range"] { width: 100%; accent-color: var(--accent); height: 30px; ma
 .mini-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .mini-months button { font: 600 13px var(--body); padding: 9px 0; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; }
 .mini-months button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+
+/* Voyages : réservations */
+.trip[role="button"] { cursor: pointer; }
+.resa { display: grid; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.resa b { font-weight: 600; }
+.resa span { font-size: 13px; color: var(--muted); }
+.resa-form { display: grid; gap: 8px; margin-top: 10px; }
+.resa-form label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+section.two { display: grid; }

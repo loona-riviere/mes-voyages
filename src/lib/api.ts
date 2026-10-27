@@ -1,5 +1,6 @@
 import type { Destination } from "../data/catalogue";
-import type { NewWish, Project, ProjectInput, Trip, Wish, WishPatch } from "../shared/types";
+import type { ReservationInput } from "./queue";
+import type { Lodging, NewWish, Project, ProjectInput, Transport, Trip, TripInput, Wish, WishPatch } from "../shared/types";
 
 const PASS_KEY = "mv-passphrase";
 
@@ -50,6 +51,10 @@ export const api = {
   wishes: async () => (await call<{ wishes: Wish[] }>("envies")).wishes,
   trips: async () => (await call<{ trips: Trip[] }>("voyages")).trips,
   catalogue: async () => (await call<{ destinations: Destination[] }>("catalogue")).destinations,
+  reservations: async () => await call<{ transports: Transport[]; lodgings: Lodging[] }>("reservations"),
+  addReservation: async (r: ReservationInput) => await call<{ transport?: Transport; lodging?: Lodging }>("reservations", { method: "POST", body: r }),
+  addTrip: async (t: TripInput) => (await call<{ trip: Trip }>("voyages", { method: "POST", body: t })).trip,
+  patchTrip: async (id: string, t: TripInput) => (await call<{ trip: Trip }>("voyages", { method: "PATCH", body: { id, ...t } })).trip,
   projects: async () => (await call<{ projects: Project[] }>("projets")).projects,
   addProject: async (p: ProjectInput) => (await call<{ project: Project }>("projets", { method: "POST", body: p })).project,
   patchProject: async (id: string, p: ProjectInput) =>
@@ -69,6 +74,8 @@ export interface Cached {
   /** Absent dans les caches d'avant le catalogue Notion */
   catalogue?: Destination[];
   projects?: Project[];
+  transports?: Transport[];
+  lodgings?: Lodging[];
   at: number;
 }
 

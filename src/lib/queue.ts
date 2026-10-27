@@ -1,16 +1,23 @@
-import type { NewWish, Wish, WishPatch } from "../shared/types";
+import type { Lodging, LodgingInput, NewWish, Project, ProjectInput, Transport, TransportInput, Wish, WishPatch } from "../shared/types";
+
+export type ReservationInput = ({ kind: "transport" } & TransportInput) | ({ kind: "lodging" } & LodgingInput);
 
 // Changements faits hors ligne, envoyés à Notion au retour du réseau.
 export type Pending =
-  | { kind: "add"; localId: string; input: NewWish }
-  | { kind: "patch"; id: string; patch: WishPatch };
+  | { kind: "wish-add"; localId: string; input: NewWish }
+  | { kind: "wish-patch"; id: string; patch: WishPatch }
+  | { kind: "project-add"; localId: string; input: ProjectInput }
+  | { kind: "project-patch"; id: string; patch: ProjectInput }
+  | { kind: "reservation"; localId: string; input: ReservationInput };
 
 const KEY = "mv-queue-v1";
 
 export function loadQueue(): Pending[] {
   try {
-    const q = JSON.parse(localStorage.getItem(KEY) ?? "[]") as Pending[];
-    return Array.isArray(q) ? q : [];
+    const raw = JSON.parse(localStorage.getItem(KEY) ?? "[]") as { kind: string }[];
+    if (!Array.isArray(raw)) return [];
+    // Anciennes files : « add » et « patch » ne concernaient que les envies.
+    return raw.map((p) => (p.kind === "add" ? { ...p, kind: "wish-add" } : p.kind === "patch" ? { ...p, kind: "wish-patch" } : p)) as Pending[];
   } catch {
     return [];
   }
@@ -25,6 +32,7 @@ export function saveQueue(q: Pending[]) {
 }
 
 export const isLocalId = (id: string) => id.startsWith("local-");
+export const newLocalId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 /** Envie affichée en attendant que Notion la crée. */
 export function localWish(localId: string, w: NewWish): Wish {
@@ -35,16 +43,41 @@ export function localWish(localId: string, w: NewWish): Wish {
   };
 }
 
-/** Ajoute un changement ; une modification d'une envie pas encore créée est fusionnée dans sa création. */
+export function localProject(localId: string, p: ProjectInput): Project {
+  return {
+    id: localId, url: "", name: p.name ?? "", months: p.months ?? [], days: p.days ?? null, budget: p.budget ?? null,
+    wants: p.wants ?? [], rules: p.rules ?? [], status: p.status ?? "À choisir", notes: p.notes ?? "",
+  };
+}
+
+export function localTransport(localId: string, t: TransportInput): Transport {
+  return {
+    id: localId, url: "", tripId: t.tripId, name: t.name, type: t.type ?? null, company: t.company ?? "",
+    start: t.start ?? null, end: t.end ?? null, reference: t.reference ?? "", cost: t.cost ?? null,
+  };
+}
+
+export function localLodging(localId: string, l: LodgingInput): Lodging {
+  return {
+    id: localId, url: "", tripId: l.tripId, name: l.name, type: l.type ?? null, address: l.address ?? "",
+    start: l.start ?? null, end: l.end ?? null, cost: l.cost ?? null,
+  };
+}
+
+/**
+ * Ajoute un changement. Une modification d'un élément pas encore créé est fusionnée dans sa création,
+ * et deux modifications successives du même élément n'en font plus qu'une.
+ */
 export function enqueue(q: Pending[], item: Pending): Pending[] {
-  if (item.kind === "patch" && isLocalId(item.id)) {
-    return q.map((p) => (p.kind === "add" && p.localId === item.id ? { ...p, input: { ...p.input, ...item.patch } } : p));
-  }
-  if (item.kind === "patch") {
-    const i = q.findIndex((p) => p.kind === "patch" && p.id === item.id);
+  if (item.kind === "wish-patch" || item.kind === "project-patch") {
+    const addKind = item.kind === "wish-patch" ? "wish-add" : "project-add";
+    if (isLocalId(item.id)) {
+      return q.map((p) => (p.kind === addKind && p.localId === item.id ? ({ ...p, input: { ...p.input, ...(item as { patch: object }).patch } } as Pending) : p));
+    }
+    const i = q.findIndex((p) => p.kind === item.kind && p.id === item.id);
     if (i >= 0) {
-      const prev = q[i] as Extract<Pending, { kind: "patch" }>;
-      return q.map((p, j) => (j === i ? { ...prev, patch: { ...prev.patch, ...item.patch } } : p));
+      const prev = q[i] as Extract<Pending, { kind: "wish-patch" | "project-patch" }>;
+      return q.map((p, j) => (j === i ? ({ ...prev, patch: { ...prev.patch, ...item.patch } } as Pending) : p));
     }
   }
   return [...q, item];

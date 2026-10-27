@@ -1,13 +1,13 @@
 # Mes voyages
 
-App perso pour choisir où partir, gérer nos envies de voyage et revoir nos voyages faits.
+App perso pour choisir où partir, gérer nos envies de voyage et gérer les voyages (à venir, en cours, faits) avec leurs vols et logements.
 Interface en français, pensée pour l'iPhone et installable sur l'écran d'accueil.
 
 - **Front** : Vite, React, TypeScript, `vite-plugin-pwa`
 - **Données** : Notion (bases « Destinations », « Envies de voyage », « Catalogue » et « Projets »), lues et modifiées par des Netlify Functions
 - **Hébergement** : Netlify
 
-Le token Notion reste côté serveur. Le navigateur ne parle qu'aux fonctions `/api/voyages`, `/api/envies`, `/api/catalogue` et `/api/projets`, protégées par une phrase secrète.
+Le token Notion reste côté serveur. Le navigateur ne parle qu'aux fonctions `/api/voyages`, `/api/reservations`, `/api/envies`, `/api/catalogue` et `/api/projets`, protégées par une phrase secrète.
 
 ### Les projets
 
@@ -107,3 +107,9 @@ Sur 100, chaque critère est gradué :
 
 Pénalités : déjà fait −15, plage en point fort alors qu'on n'en veut pas −20, aucune envie ne colle −5,
 très fréquenté avec « peu de monde » −5, paludisme avec enfants −12 (−5 si seulement une partie du pays).
+
+## Voyages et hors ligne
+
+L'onglet **Voyages** liste les voyages En cours, À venir (statut « À planifier ») et Faits. Une fiche permet de changer le statut et d'ajouter vols/transports (base Transports) et logements (base Hébergements), reliés au voyage. Créer ou changer le statut d'un voyage demande le réseau.
+
+Hors ligne, les envies, projets, vols et logements ajoutés ou modifiés sont gardés sur l'appareil (`mv-queue-v1`) et envoyés à Notion, dans l'ordre, au retour du réseau (ouverture de l'app, retour au premier plan ou bouton de synchronisation).

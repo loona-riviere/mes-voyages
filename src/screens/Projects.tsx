@@ -65,11 +65,10 @@ export function ProjectSheet({ state, onClose, criteria, notion, toast }: {
     if (state) setName(project?.name ?? "");
   }, [state, project?.name]);
 
-  const run = async (fn: () => Promise<unknown>, done: string) => {
+  const run = async (fn: () => Promise<boolean>, done: string) => {
     setBusy(true);
     try {
-      await fn();
-      toast(done);
+      toast((await fn()) ? done : "Enregistré ici, envoyé à Notion au retour du réseau");
       onClose();
     } catch (e) {
       toast(e instanceof Error ? e.message : "Enregistrement impossible");
@@ -78,8 +77,6 @@ export function ProjectSheet({ state, onClose, criteria, notion, toast }: {
     }
   };
   const fromCriteria = { months: [...criteria.months], days: criteria.days, budget: criteria.budget, wants: [...criteria.wants], rules: [...criteria.rules] };
-  const offline = notion.state === "offline";
-
   return (
     <Sheet
       open={!!state}
@@ -87,14 +84,14 @@ export function ProjectSheet({ state, onClose, criteria, notion, toast }: {
       onClose={onClose}
       footer={project ? (
         <div className="foot-row">
-          <button className="btn ghost" disabled={busy || offline} onClick={() => run(() => notion.saveProject({ status: "Archivé" }, project.id), `${project.name} archivé`)}>Archiver</button>
-          <button className="btn primary" disabled={busy || offline || !name.trim()}
+          <button className="btn ghost" disabled={busy} onClick={() => run(() => notion.saveProject({ status: "Archivé" }, project.id), `${project.name} archivé`)}>Archiver</button>
+          <button className="btn primary" disabled={busy || !name.trim()}
             onClick={() => run(() => notion.saveProject({ name: name.trim(), ...fromCriteria }, project.id), "Projet mis à jour")}>
             Mettre à jour
           </button>
         </div>
       ) : (
-        <button className="btn primary" disabled={busy || offline || !name.trim()}
+        <button className="btn primary" disabled={busy || !name.trim()}
           onClick={() => run(() => notion.saveProject({ name: name.trim(), ...fromCriteria }), "Projet enregistré dans Notion")}>
           Enregistrer le projet
         </button>
@@ -120,7 +117,6 @@ export function ProjectSheet({ state, onClose, criteria, notion, toast }: {
             : "Le projet garde ces critères. Tu pourras le retrouver ici et dans la base Notion « Projets »."}
         </p>
       </section>
-      {offline && <p className="hint">Pas de réseau : les projets ne peuvent pas être modifiés hors ligne.</p>}
       {project?.url && <a className="link" href={project.url} target="_blank" rel="noopener">Ouvrir dans Notion ↗</a>}
     </Sheet>
   );
@@ -218,13 +214,11 @@ export function ProjectForm({ state, onClose, notion, toast }: {
 
   const flip = <T,>(list: readonly T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   const num = (s: string) => (s.trim() === "" ? null : Math.max(0, Number(s) || 0));
-  const offline = notion.state === "offline";
-
   const save = async () => {
     setBusy(true);
     try {
-      await notion.saveProject({ name: name.trim(), months, days: num(days), budget: num(budget), wants, rules, status, notes }, project?.id);
-      toast(project ? "Projet mis à jour" : "Projet enregistré dans Notion");
+      const sent = await notion.saveProject({ name: name.trim(), months, days: num(days), budget: num(budget), wants, rules, status, notes }, project?.id);
+      toast(!sent ? "Enregistré ici, envoyé à Notion au retour du réseau" : project ? "Projet mis à jour" : "Projet enregistré dans Notion");
       onClose();
     } catch (e) {
       toast(e instanceof Error ? e.message : "Enregistrement impossible");
@@ -238,7 +232,7 @@ export function ProjectForm({ state, onClose, notion, toast }: {
       open={!!state}
       title={project ? "Modifier le projet" : "Nouveau projet"}
       onClose={onClose}
-      footer={<button className="btn primary" disabled={busy || offline || !name.trim()} onClick={save}>{busy ? "Enregistrement…" : "Enregistrer"}</button>}
+      footer={<button className="btn primary" disabled={busy || !name.trim()} onClick={save}>{busy ? "Enregistrement…" : "Enregistrer"}</button>}
     >
       <section>
         <label className="lbl" htmlFor="pfName">Nom</label>
@@ -284,7 +278,6 @@ export function ProjectForm({ state, onClose, notion, toast }: {
         <label className="lbl" htmlFor="pfNotes">Notes</label>
         <textarea id="pfNotes" className="field textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Dates à attendre, hésitations, destinations en lice…" />
       </section>
-      {offline && <p className="hint">Pas de réseau : les projets ne peuvent pas être modifiés hors ligne.</p>}
       {project?.url && <a className="link" href={project.url} target="_blank" rel="noopener">Ouvrir dans Notion ↗</a>}
     </Sheet>
   );

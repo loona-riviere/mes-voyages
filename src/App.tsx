@@ -11,7 +11,7 @@ import { Unlock } from "./screens/Unlock";
 import { NO_FILTER, Wishes, WishesHeader, WishSheet, type WishFilter } from "./screens/Wishes";
 import { applyProject, ProjectForm, ProjectSheet, ProjectsRow, ProjectsTab, type ProjectSheetState } from "./screens/Projects";
 
-const TITLES: Record<Tab, string> = { choose: "Où partir ?", wishes: "Envies", projects: "Projets", trips: "Voyages faits" };
+const TITLES: Record<Tab, string> = { choose: "Où partir ?", wishes: "Envies", projects: "Projets", trips: "Voyages" };
 
 export function App() {
   const notion = useNotion();
@@ -93,7 +93,7 @@ export function App() {
               onNew={() => setProjectForm({ mode: "new" })}
             />
           )}
-          {tab === "trips" && <Trips notion={notion} />}
+          {tab === "trips" && <Trips notion={notion} toast={toast} />}
         </main>
       </div>
       <TabBar tab={tab} onChange={go} wishCount={notion.wishes.length} />

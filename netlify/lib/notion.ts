@@ -1,7 +1,9 @@
 import { MONTHS, RULES, WANT_FROM_LABEL, WANT_LABEL, WANTS, type Destination, type Level, type Rule, type Want } from "../../src/data/catalogue";
 import {
   PRIORITIES, WISH_STATUSES,
-  type Project, type ProjectInput, type ProjectStatus,
+  LODGING_TYPES, TRANSPORT_TYPES,
+  type Lodging, type LodgingInput, type LodgingType, type Project, type ProjectInput, type ProjectStatus,
+  type Transport, type TransportInput, type TransportType, type TripInput,
   type Kids, type NewWish, type Priority, type Trip, type TripStatus, type Wish, type WishPatch, type WishStatus,
 } from "../../src/shared/types";
 
@@ -10,6 +12,8 @@ export const TRIPS_DATA_SOURCE = "8195c0cd-68d2-408e-afce-409b3f113982";
 export const WISHES_DATA_SOURCE = "f84d6097-98c1-4b04-8fa9-bb7bcd36b7a4";
 export const CATALOGUE_DATA_SOURCE = "9a6e6864-ed0d-44b8-8846-663a6b5b8dca";
 export const PROJECTS_DATA_SOURCE = "11a1b63f-f92b-4607-aa33-d9781e11ff1f";
+export const TRANSPORTS_DATA_SOURCE = "0a7f2ce5-f223-4b18-bd4a-485c566acfc0";
+export const LODGINGS_DATA_SOURCE = "56ca372e-a9f0-401c-badd-48358712e582";
 
 const WANT_LABELS: readonly string[] = WANTS.map((w) => w.label);
 const KIDS: readonly Kids[] = ["Sans enfants", "Avec enfants"];
@@ -340,6 +344,108 @@ export function projectProperties(input: ProjectInput, creating: boolean): Recor
   if (input.rules !== undefined) props["Contraintes"] = { multi_select: input.rules.map((r) => ({ name: RULE_LABEL[check(RULE_KEYS as readonly Rule[], r, "Contraintes")] })) };
   if (input.notes !== undefined) props["Notes"] = { rich_text: rich(String(input.notes)) };
   if (input.status !== undefined || creating) props["Statut"] = sel(check(PROJECT_STATUSES, input.status ?? "À choisir", "Statut"));
+  if (!Object.keys(props).length) throw new InvalidInput("Rien à modifier");
+  return props;
+}
+
+// ---------- Réservations (transports, logements) et voyages ----------
+
+/** Date avec heure éventuelle, telle que Notion la renvoie (AAAA-MM-JJ ou AAAA-MM-JJThh:mm). */
+function dateTimes(p: Page, name: string): { start: string | null; end: string | null } {
+  const v = get(p, name);
+  const d = v?.type === "date" ? (v.date as { start: string; end: string | null } | null) : null;
+  const cut = (s: string | null | undefined) => (s ? (s.length > 10 ? s.slice(0, 16) : s) : null);
+  return { start: cut(d?.start), end: cut(d?.end) };
+}
+
+export function toTransport(p: Page): Transport {
+  const { start, end } = dateTimes(p, "Date");
+  return {
+    id: p.id,
+    url: p.url,
+    tripId: relationIds(p, "Destination")[0] ?? null,
+    name: text(p, "Nom"),
+    type: oneOf(TRANSPORT_TYPES, option(p, "Type")),
+    company: text(p, "Compagnie"),
+    start,
+    end,
+    reference: text(p, "Référence"),
+    cost: num(p, "Coût"),
+  };
+}
+
+export function toLodging(p: Page): Lodging {
+  const { start, end } = dateTimes(p, "Date");
+  return {
+    id: p.id,
+    url: p.url,
+    tripId: relationIds(p, "Destination")[0] ?? null,
+    name: text(p, "Nom"),
+    type: oneOf(LODGING_TYPES, option(p, "Type")),
+    address: text(p, "Adresse"),
+    start,
+    end,
+    cost: num(p, "Coût"),
+  };
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
+const PAGE_ID_RE = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
+
+function dateProp(start: string | null | undefined, end: string | null | undefined) {
+  if (!start) return { date: null };
+  for (const d of [start, end]) if (d && !DATE_RE.test(d)) throw new InvalidInput("Date invalide");
+  // Sans fuseau, Notion garde l'heure telle qu'écrite (heure du lieu).
+  return { date: { start, end: end || null } };
+}
+
+function tripRelation(tripId: string) {
+  if (!PAGE_ID_RE.test(tripId)) throw new InvalidInput("Voyage invalide");
+  return { relation: [{ id: tripId }] };
+}
+
+function requireName(name: unknown): string {
+  const n = typeof name === "string" ? name.trim() : "";
+  if (!n) throw new InvalidInput("Nom manquant");
+  return n;
+}
+
+export function transportProperties(input: TransportInput): Record<string, unknown> {
+  const props: Record<string, unknown> = {
+    "Nom": { title: rich(requireName(input.name)) },
+    "Destination": tripRelation(input.tripId),
+  };
+  if (input.type) props["Type"] = sel(check<TransportType>(TRANSPORT_TYPES, input.type, "Type"));
+  if (input.company) props["Compagnie"] = { rich_text: rich(String(input.company)) };
+  if (input.reference) props["Référence"] = { rich_text: rich(String(input.reference)) };
+  if (input.start) props["Date"] = dateProp(input.start, input.end);
+  const cost = positive(input.cost, "Coût");
+  if (cost !== null) props["Coût"] = { number: cost };
+  return props;
+}
+
+export function lodgingProperties(input: LodgingInput): Record<string, unknown> {
+  const props: Record<string, unknown> = {
+    "Nom": { title: rich(requireName(input.name)) },
+    "Destination": tripRelation(input.tripId),
+  };
+  if (input.type) props["Type"] = sel(check<LodgingType>(LODGING_TYPES, input.type, "Type"));
+  if (input.address) props["Adresse"] = { rich_text: rich(String(input.address)) };
+  if (input.start) props["Date"] = dateProp(input.start, input.end);
+  const cost = positive(input.cost, "Coût");
+  if (cost !== null) props["Coût"] = { number: cost };
+  return props;
+}
+
+/** Création ou mise à jour d'un voyage : nom, statut, dates. Le budget vient des réservations. */
+export function tripProperties(input: TripInput, creating: boolean): Record<string, unknown> {
+  const props: Record<string, unknown> = {};
+  if (input.name !== undefined || creating) props["Nom"] = { title: rich(requireName(input.name)) };
+  if (input.status !== undefined) props["Statut"] = { status: { name: check(TRIP_STATUSES, input.status, "Statut") } };
+  if (input.start !== undefined || input.end !== undefined) {
+    for (const d of [input.start, input.end]) if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new InvalidInput("Date invalide");
+    props["Date"] = input.start ? { date: { start: input.start, end: input.end || null } } : { date: null };
+  }
   if (!Object.keys(props).length) throw new InvalidInput("Rien à modifier");
   return props;
 }
