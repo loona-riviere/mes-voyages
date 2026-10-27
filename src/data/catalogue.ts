@@ -4,6 +4,7 @@ export const MONTHS = [
 ] as const;
 export type MonthName = (typeof MONTHS)[number];
 export const MONTH_LETTERS = "JFMAMJJASOND";
+export const MONTH_SHORT = ["Janv.", "Févr.", "Mars", "Avr.", "Mai", "Juin", "Juil.", "Août", "Sept.", "Oct.", "Nov.", "Déc."] as const;
 
 export const WANTS = [
   { key: "plage", label: "Plage" },

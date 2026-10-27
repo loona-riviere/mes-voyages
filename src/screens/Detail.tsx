@@ -57,10 +57,6 @@ export function DetailSheet({ result: r, criteria: c, onClose, comparing, onTogg
           {highlight(r) && <p className="highlight">{highlight(r)}</p>}
           <ProsCons result={r} criteria={c} />
           <section>
-            <div className="lbl">Pourquoi ce score</div>
-            <ScoreBreakdown result={r} criteria={c} />
-          </section>
-          <section>
             <div className="lbl">Saison</div>
             <SeasonDots season={seasonOf(r)} months={c.months} />
             {r.kind === "destination" && r.destination.highlights && (
@@ -100,7 +96,11 @@ export function DetailSheet({ result: r, criteria: c, onClose, comparing, onTogg
               <dt>Durée idéale</dt><dd>{r.idealDays ? `${r.idealDays} jours` : "—"}</dd>
             </dl>
           )}
-          <p className="why">{explain(r, c)} Estimations depuis Paris, à vérifier avant de réserver.</p>
+          <details className="fold-sec">
+            <summary className="lbl">Pourquoi {r.score} sur 100 ?</summary>
+            <ScoreBreakdown result={r} criteria={c} />
+            <p className="why">{explain(r, c)} Estimations depuis Paris, à vérifier avant de réserver.</p>
+          </details>
         </>
       )}
     </Sheet>

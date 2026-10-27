@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { AddFab } from "../components/AddFab";
 import { Sheet } from "../components/Sheet";
 import { DEFAULT_CHECKLIST, parseChecklist, serializeChecklist } from "../lib/checklist";
-import { MONTHS } from "../data/catalogue";
+import { MONTH_SHORT, MONTHS } from "../data/catalogue";
 import { dateRange, euros } from "../lib/format";
 import type { ReservationInput } from "../lib/queue";
 import type { NotionData } from "../lib/useNotion";
@@ -110,7 +110,7 @@ function YearCalendar({ trips, onOpen }: { trips: Trip[]; onOpen: (id: string) =
         const here = trips.filter((t) => touches(t, i)).sort(byStart);
         return (
           <div key={m} className="cal-row">
-            <span className="cal-m">{m.slice(0, 4)}{m.length > 4 ? "." : ""}</span>
+            <span className="cal-m">{MONTH_SHORT[i]}</span>
             <span className="cal-t">
               {here.length === 0 && <i className="cal-empty">—</i>}
               {here.map((t) => (

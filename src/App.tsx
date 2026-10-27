@@ -102,7 +102,7 @@ export function App() {
         </main>
       </div>
       <TabBar tab={tab} onChange={go} wishCount={notion.wishes.length} />
-      <ProjectForm state={projectForm} onClose={() => setProjectForm(null)} notion={notion} toast={toast} />
+      <ProjectForm state={projectForm} onClose={() => setProjectForm(null)} notion={notion} toast={toast} onPlanned={() => go("trips")} />
       <ProjectSheet state={projectSheet} onClose={() => setProjectSheet(null)} criteria={criteria} notion={notion} toast={toast} />
       <CriteriaSheet open={critOpen} onClose={closeCrit} criteria={criteria} setCriteria={setCriteria} count={count} />
       <WishSheet wish={notion.wishes.find((w) => w.id === wishId) ?? null} onClose={closeWish} notion={notion} toast={toast}

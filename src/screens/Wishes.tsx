@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MONTH_LETTERS, MONTHS, WANTS } from "../data/catalogue";
+import { MONTH_LETTERS, MONTH_SHORT, MONTHS, WANTS } from "../data/catalogue";
 import { AddFab } from "../components/AddFab";
 import { Sheet } from "../components/Sheet";
 import { euros } from "../lib/format";
@@ -249,7 +249,7 @@ export function WishForm({ state, onClose, notion, toast }: { state: WishFormSta
       <section>
         <div className="lbl">Meilleurs mois</div>
         <div className="chips">
-          {MONTHS.map((m, i) => <button key={m} type="button" className="chip" aria-pressed={months.includes(i)} onClick={() => setMonths(flip(months, i).sort((a, b) => a - b))}>{m.slice(0, 4)}{m.length > 4 ? "." : ""}</button>)}
+          {MONTHS.map((m, i) => <button key={m} type="button" className="chip" aria-pressed={months.includes(i)} onClick={() => setMonths(flip(months, i).sort((a, b) => a - b))}>{MONTH_SHORT[i]}</button>)}
         </div>
       </section>
       <section className="two">

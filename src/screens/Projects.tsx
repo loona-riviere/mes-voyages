@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RULES, WANT_LABEL, WANTS } from "../data/catalogue";
+import { MONTH_SHORT, RULES, WANT_LABEL, WANTS } from "../data/catalogue";
 import { AddFab } from "../components/AddFab";
 import { Sheet } from "../components/Sheet";
 import { euros } from "../lib/format";
@@ -167,8 +167,8 @@ function ProjectCard({ p, onApply, onEdit }: { p: Project; onApply: (p: Project)
 }
 
 /** Formulaire complet d'un projet (création ou modification). */
-export function ProjectForm({ state, onClose, notion, toast }: {
-  state: ProjectSheetState; onClose: () => void; notion: NotionData; toast: (m: string) => void;
+export function ProjectForm({ state, onClose, notion, toast, onPlanned }: {
+  state: ProjectSheetState; onClose: () => void; notion: NotionData; toast: (m: string) => void; onPlanned: () => void;
 }) {
   const project = state?.mode === "edit" ? notion.projects.find((p) => p.id === state.id) : undefined;
   const [name, setName] = useState("");
@@ -209,12 +209,34 @@ export function ProjectForm({ state, onClose, notion, toast }: {
     }
   };
 
+  /** Le projet est décidé : on crée le voyage et on marque le projet « Choisi ». */
+  const plan = async () => {
+    if (!project) return;
+    setBusy(true);
+    try {
+      await notion.saveTrip({ name: name.trim() || project.name, status: "À planifier" });
+      await notion.saveProject({ status: "Choisi" }, project.id);
+      toast("Voyage créé : ajoute les dates et les réservations");
+      onClose();
+      onPlanned();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Création impossible");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <Sheet
       open={!!state}
       title={project ? "Modifier le projet" : "Nouveau projet"}
       onClose={onClose}
-      footer={<button className="btn primary" disabled={busy || !name.trim()} onClick={save}>{busy ? "Enregistrement…" : "Enregistrer"}</button>}
+      footer={project ? (
+        <div className="foot-row">
+          <button className="btn ghost" disabled={busy || notion.state === "offline"} onClick={plan}>Créer le voyage</button>
+          <button className="btn primary" disabled={busy || !name.trim()} onClick={save}>{busy ? "Enregistrement…" : "Enregistrer"}</button>
+        </div>
+      ) : <button className="btn primary" disabled={busy || !name.trim()} onClick={save}>{busy ? "Enregistrement…" : "Enregistrer"}</button>}
     >
       <section>
         <label className="lbl" htmlFor="pfName">Nom</label>
@@ -224,7 +246,7 @@ export function ProjectForm({ state, onClose, notion, toast }: {
         <div className="lbl">Mois envisagés <b>{months.length ? `${months.length}` : "aucun"}</b></div>
         <div className="mini-months">
           {MONTH_NAMES.map((m, i) => (
-            <button key={m} aria-pressed={months.includes(i)} onClick={() => setMonths(flip(months, i))}>{m.slice(0, 4)}{m.length > 4 ? "." : ""}</button>
+            <button key={m} aria-pressed={months.includes(i)} onClick={() => setMonths(flip(months, i))}>{MONTH_SHORT[i]}</button>
           ))}
         </div>
       </section>
