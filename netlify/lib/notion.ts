@@ -237,6 +237,8 @@ export function toTrip(p: Page): Trip {
     days: num(p, "Durée") ?? daysBetween(start, end),
     pricePerPerson: num(p, "Prix par personne"),
     dailyPerPerson: num(p, "Budget / jour / pers"),
+    rating: num(p, "Note"),
+    memories: text(p, "Souvenirs"),
   };
 }
 
@@ -410,30 +412,30 @@ function requireName(name: unknown): string {
   return n;
 }
 
-export function transportProperties(input: TransportInput): Record<string, unknown> {
+export function transportProperties(input: TransportInput, editing = false): Record<string, unknown> {
   const props: Record<string, unknown> = {
     "Nom": { title: rich(requireName(input.name)) },
     "Destination": tripRelation(input.tripId),
   };
   if (input.type) props["Type"] = sel(check<TransportType>(TRANSPORT_TYPES, input.type, "Type"));
-  if (input.company) props["Compagnie"] = { rich_text: rich(String(input.company)) };
-  if (input.reference) props["Référence"] = { rich_text: rich(String(input.reference)) };
-  if (input.start) props["Date"] = dateProp(input.start, input.end);
+  if (input.company || editing) props["Compagnie"] = { rich_text: input.company ? rich(String(input.company)) : [] };
+  if (input.reference || editing) props["Référence"] = { rich_text: input.reference ? rich(String(input.reference)) : [] };
+  if (input.start || editing) props["Date"] = dateProp(input.start, input.end);
   const cost = positive(input.cost, "Coût");
-  if (cost !== null) props["Coût"] = { number: cost };
+  if (cost !== null || editing) props["Coût"] = { number: cost };
   return props;
 }
 
-export function lodgingProperties(input: LodgingInput): Record<string, unknown> {
+export function lodgingProperties(input: LodgingInput, editing = false): Record<string, unknown> {
   const props: Record<string, unknown> = {
     "Nom": { title: rich(requireName(input.name)) },
     "Destination": tripRelation(input.tripId),
   };
   if (input.type) props["Type"] = sel(check<LodgingType>(LODGING_TYPES, input.type, "Type"));
-  if (input.address) props["Adresse"] = { rich_text: rich(String(input.address)) };
-  if (input.start) props["Date"] = dateProp(input.start, input.end);
+  if (input.address || editing) props["Adresse"] = { rich_text: input.address ? rich(String(input.address)) : [] };
+  if (input.start || editing) props["Date"] = dateProp(input.start, input.end);
   const cost = positive(input.cost, "Coût");
-  if (cost !== null) props["Coût"] = { number: cost };
+  if (cost !== null || editing) props["Coût"] = { number: cost };
   return props;
 }
 
@@ -446,6 +448,12 @@ export function tripProperties(input: TripInput, creating: boolean): Record<stri
     for (const d of [input.start, input.end]) if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new InvalidInput("Date invalide");
     props["Date"] = input.start ? { date: { start: input.start, end: input.end || null } } : { date: null };
   }
+  if (input.budget !== undefined) props["Budget"] = { number: positive(input.budget, "Budget") };
+  if (input.rating !== undefined) {
+    if (input.rating !== null && !(Number.isInteger(input.rating) && input.rating >= 1 && input.rating <= 5)) throw new InvalidInput("Note invalide");
+    props["Note"] = { number: input.rating };
+  }
+  if (input.memories !== undefined) props["Souvenirs"] = { rich_text: input.memories ? rich(String(input.memories)) : [] };
   if (!Object.keys(props).length) throw new InvalidInput("Rien à modifier");
   return props;
 }

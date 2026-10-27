@@ -4,7 +4,7 @@ import type { Trip } from "../shared/types";
 import { matchCatalogue, norm, tripFor } from "./match";
 
 const trip = (name: string, start: string, status: Trip["status"] = "Visité"): Trip => ({
-  id: name + start, url: "", name, status, start, end: null, budget: null, days: null, pricePerPerson: null, dailyPerPerson: null,
+  id: name + start, url: "", name, status, start, end: null, budget: null, days: null, pricePerPerson: null, dailyPerPerson: null, rating: null, memories: "",
 });
 
 describe("match", () => {

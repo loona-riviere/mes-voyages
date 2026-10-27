@@ -40,6 +40,9 @@ export interface Trip {
   days: number | null;
   pricePerPerson: number | null;
   dailyPerPerson: number | null;
+  /** Note de 1 à 5 donnée après le voyage */
+  rating: number | null;
+  memories: string;
 }
 
 export type TransportType = "Avion" | "Train" | "Bus" | "Voiture" | "Moto" | "Vélo" | "Taxi" | "Bateau";
@@ -100,6 +103,9 @@ export interface TripInput {
   status?: TripStatus;
   start?: string | null;
   end?: string | null;
+  budget?: number | null;
+  rating?: number | null;
+  memories?: string;
 }
 
 export interface NewWish {

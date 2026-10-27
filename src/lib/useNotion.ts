@@ -30,6 +30,9 @@ export interface NotionData {
   addReservation: (r: ReservationInput) => Promise<boolean>;
   /** Création et modification d'un voyage : réseau nécessaire. */
   saveTrip: (t: TripInput, id?: string) => Promise<Trip>;
+  /** Modifier ou supprimer une réservation déjà dans Notion : réseau nécessaire. */
+  updateReservation: (r: ReservationInput, id: string) => Promise<void>;
+  deleteReservation: (kind: "transport" | "lodging", id: string) => Promise<void>;
 }
 
 interface Data {
@@ -298,6 +301,21 @@ export function useNotion(): NotionData {
     return saved;
   }, []);
 
+  const updateReservation = useCallback(async (input: ReservationInput, id: string) => {
+    const saved = await api.updateReservation({ ...input, id });
+    if (saved.transport) setTransports((prev) => prev.map((t) => (t.id === id ? saved.transport! : t)));
+    if (saved.lodging) setLodgings((prev) => prev.map((l) => (l.id === id ? saved.lodging! : l)));
+    void api.trips().then(setTrips).catch(() => undefined);
+  }, []);
+
+  const deleteReservation = useCallback(async (kind: "transport" | "lodging", id: string) => {
+    if (!isLocalId(id)) await api.deleteReservation(kind, id);
+    if (kind === "transport") setTransports((prev) => prev.filter((t) => t.id !== id));
+    else setLodgings((prev) => prev.filter((l) => l.id !== id));
+    setQueue(queue.current.filter((p) => !(p.kind === "reservation" && p.localId === id)));
+    void api.trips().then(setTrips).catch(() => undefined);
+  }, []);
+
   // Garde le cache à jour avec ce qui est affiché, sans les éléments pas encore créés.
   useEffect(() => {
     if (!updatedAt) return;
@@ -313,6 +331,6 @@ export function useNotion(): NotionData {
 
   return {
     wishes, trips, catalogue, projects, transports, lodgings, state, error, updatedAt, pending,
-    refresh, unlock, addWish, patchWish, saveProject, addReservation, saveTrip,
+    refresh, unlock, addWish, patchWish, saveProject, addReservation, saveTrip, updateReservation, deleteReservation,
   };
 }

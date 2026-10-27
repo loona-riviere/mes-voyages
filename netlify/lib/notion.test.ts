@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newWishProperties, num, parseHighlights, patchProperties, projectProperties, toDestination, toProject, toTrip, toWish, type Page } from "./notion";
+import { newWishProperties, num, parseHighlights, patchProperties, projectProperties, toDestination, toProject, toTrip, toWish, transportProperties, tripProperties, type Page } from "./notion";
 
 const rt = (s: string) => [{ plain_text: s }];
 
@@ -164,5 +164,25 @@ describe("projets", () => {
     expect(projectProperties({ status: "Archivé" }, false)).toEqual({ "Statut": { select: { name: "Archivé" } } });
     expect(() => projectProperties({}, true)).toThrow("Nom manquant");
     expect(() => projectProperties({ wants: ["shopping" as never] }, false)).toThrow("Envies invalide");
+  });
+});
+
+describe("voyages et réservations", () => {
+  it("écrit note, souvenirs et budget d'un voyage", () => {
+    const props = tripProperties({ rating: 4, memories: "Top", budget: 1200 }, false) as Record<string, any>;
+    expect(props["Note"]).toEqual({ number: 4 });
+    expect(props["Souvenirs"].rich_text[0].text.content).toBe("Top");
+    expect(props["Budget"]).toEqual({ number: 1200 });
+  });
+  it("refuse une note hors 1-5 et accepte de l'effacer", () => {
+    expect(() => tripProperties({ rating: 7 }, false)).toThrow();
+    expect((tripProperties({ rating: null }, false) as Record<string, any>)["Note"]).toEqual({ number: null });
+  });
+  it("vide les champs d'un transport en modification", () => {
+    const id = "406dac8e-ae8e-81d9-a9e1-e5a0de012d53";
+    const props = transportProperties({ tripId: id, name: "Vol" }, true) as Record<string, any>;
+    expect(props["Référence"].rich_text).toEqual([]);
+    expect(props["Date"]).toEqual({ date: null });
+    expect(props["Coût"]).toEqual({ number: null });
   });
 });

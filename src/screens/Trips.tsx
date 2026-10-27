@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Sheet } from "../components/Sheet";
 import { dateRange, euros } from "../lib/format";
+import type { ReservationInput } from "../lib/queue";
 import type { NotionData } from "../lib/useNotion";
 import { LODGING_TYPES, TRANSPORT_TYPES, type Lodging, type LodgingType, type Transport, type TransportType, type Trip, type TripStatus } from "../shared/types";
 
@@ -10,6 +11,20 @@ const tripDays = (t: Trip) =>
 const byStart = (a: Trip, b: Trip) => String(a.start ?? "9999").localeCompare(String(b.start ?? "9999"));
 const exact = (e: unknown) => (e instanceof Error ? e.message : "Enregistrement impossible");
 const SAVED_LATER = "Enregistré ici, envoyé à Notion au retour du réseau";
+const today = () => new Date().toISOString().slice(0, 10);
+const num = (s: string) => (s.trim() === "" ? null : Math.max(0, Number(s.replace(",", ".")) || 0));
+const dayDiff = (iso: string) => Math.round((Date.parse(iso) - Date.parse(today())) / 864e5);
+
+/** Texte du compte à rebours, ou null pour un voyage sans date ou déjà fait. */
+export function countdown(t: Pick<Trip, "status" | "start" | "end">): string | null {
+  if (t.status === "Visité" || !t.start) return null;
+  const d = dayDiff(t.start);
+  if (d > 1) return `Dans ${d} jours`;
+  if (d === 1) return "Demain";
+  if (d === 0) return "Départ aujourd'hui";
+  if (t.end && dayDiff(t.end) >= 0) return `Jour ${-d + 1}`;
+  return null;
+}
 
 type Form = { mode: "new" } | { mode: "view"; id: string } | null;
 
@@ -45,7 +60,7 @@ export function Trips({ notion, toast }: { notion: NotionData; toast: (m: string
       <button className="add-proj" onClick={() => setForm({ mode: "new" })}>+ Nouveau voyage</button>
       {current.length > 0 && (<><div className="year">En cours</div><div className="timeline">{current.map(card)}</div></>)}
       {upcoming.length > 0 && (<><div className="year">À venir</div><div className="timeline">{upcoming.map(card)}</div></>)}
-      {notion.state === "ok" && notion.trips.length === 0 && <div className="empty">Aucun voyage dans Notion pour l'instant.</div>}
+      {notion.state === "ok" && notion.trips.length === 0 && <div className="empty">Aucun voyage pour l'instant. Ajoute-en un avec le bouton ci-dessus, même un voyage déjà fait.</div>}
       {[...byYear].map(([year, trips]) => (
         <div key={year}>
           <div className="year">{year}</div>
@@ -57,21 +72,33 @@ export function Trips({ notion, toast }: { notion: NotionData; toast: (m: string
   );
 }
 
+const Stars = ({ value, onChange }: { value: number | null; onChange?: (n: number | null) => void }) => (
+  <span className="stars" role={onChange ? "radiogroup" : undefined} aria-label="Note">
+    {[1, 2, 3, 4, 5].map((n) => (
+      <button key={n} type="button" disabled={!onChange} aria-label={`${n} sur 5`} aria-pressed={(value ?? 0) >= n}
+        onClick={() => onChange?.(value === n ? null : n)}>★</button>
+    ))}
+  </span>
+);
+
 function TripItem({ t, notion, onOpen }: { t: Trip; notion: NotionData; onOpen: () => void }) {
   const days = tripDays(t);
   const flights = notion.transports.filter((x) => x.tripId === t.id).length;
   const lodgings = notion.lodgings.filter((x) => x.tripId === t.id).length;
+  const cd = countdown(t);
   return (
     <article className="trip" onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && onOpen()}>
       <div className="trip-top">
         <h3>{t.name}</h3>
         {t.start && <span className="when">{dateRange(t.start, t.end)}</span>}
       </div>
+      {cd && <div className="countdown">{cd}</div>}
       <div className="wmeta">
         {days != null && <span><b>{days} j</b></span>}
         {t.budget != null && <span><b>{euros(t.budget)}</b> au total</span>}
         {t.pricePerPerson != null && <span><b>{euros(t.pricePerPerson)}</b> / pers.</span>}
         {t.dailyPerPerson != null && <span><b>{euros(t.dailyPerPerson)}</b> / jour</span>}
+        {t.status === "Visité" && t.rating != null && <Stars value={t.rating} />}
         {t.status !== "Visité" && <span>{flights} vol{flights > 1 ? "s" : ""} · {lodgings} logement{lodgings > 1 ? "s" : ""}</span>}
       </div>
     </article>
@@ -80,72 +107,139 @@ function TripItem({ t, notion, onOpen }: { t: Trip; notion: NotionData; onOpen: 
 
 const when = (s: string | null) => (s ? new Date(s).toLocaleString("fr-FR", { day: "numeric", month: "short", ...(s.length > 10 ? { hour: "2-digit", minute: "2-digit" } : {}) }) : "");
 
+type Adding = { kind: "transport" | "lodging"; editId?: string } | null;
+
 function TripSheet({ form, onClose, notion, toast }: { form: Form; onClose: () => void; notion: NotionData; toast: (m: string) => void }) {
   const trip = form?.mode === "view" ? notion.trips.find((t) => t.id === form.id) : undefined;
-  const [adding, setAdding] = useState<"transport" | "lodging" | null>(null);
+  const [adding, setAdding] = useState<Adding>(null);
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const [budget, setBudget] = useState("");
+  const [status, setStatus] = useState<TripStatus>("À planifier");
+  const [rating, setRating] = useState<number | null>(null);
+  const [memories, setMemories] = useState("");
 
-  const close = () => { setAdding(null); setName(""); setStart(""); setEnd(""); onClose(); };
+  const load = (t?: Trip) => {
+    setName(t?.name ?? ""); setStart(t?.start ?? ""); setEnd(t?.end ?? ""); setBudget(t?.budget != null ? String(t.budget) : "");
+    setStatus(t?.status === "À visiter" || !t?.status ? "À planifier" : t.status); setRating(t?.rating ?? null); setMemories(t?.memories ?? "");
+  };
+  const [loaded, setLoaded] = useState<string | null>(null);
+  const key = form?.mode === "view" ? form.id : form?.mode ?? null;
+  if (key !== loaded) { setLoaded(key); setAdding(null); setEditing(false); load(trip); }
+
+  const close = () => { setAdding(null); setEditing(false); onClose(); };
   const guard = async (fn: () => Promise<void>) => {
     setBusy(true);
     try { await fn(); } catch (e) { toast(exact(e)); } finally { setBusy(false); }
   };
+  const offline = notion.state === "offline";
+  const fields = { name: name.trim(), start: start || null, end: end || null, budget: num(budget), status, rating: status === "Visité" ? rating : null, memories: memories.trim() };
+
+  const editor = (
+    <>
+      <section>
+        <label className="lbl" htmlFor="tName">Nom</label>
+        <input id="tName" className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Marrakech" autoComplete="off" />
+      </section>
+      <section className="two">
+        <div><label className="lbl" htmlFor="tStart">Départ</label><input id="tStart" type="date" className="field" value={start} onChange={(e) => setStart(e.target.value)} /></div>
+        <div><label className="lbl" htmlFor="tEnd">Retour</label><input id="tEnd" type="date" className="field" value={end} onChange={(e) => setEnd(e.target.value)} /></div>
+      </section>
+      <section>
+        <div className="lbl">Statut</div>
+        <div className="segs" role="radiogroup" aria-label="Statut du voyage">
+          {STATUSES.map((s) => <button key={s} role="radio" aria-checked={status === s} onClick={() => setStatus(s)}>{s}</button>)}
+        </div>
+      </section>
+      <section>
+        <label className="lbl" htmlFor="tBudget">Budget total (€)</label>
+        <input id="tBudget" className="field" inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Facultatif" />
+      </section>
+      {status === "Visité" && (
+        <>
+          <section><div className="lbl">Note</div><Stars value={rating} onChange={setRating} /></section>
+          <section>
+            <label className="lbl" htmlFor="tMem">Souvenirs</label>
+            <textarea id="tMem" className="field textarea" value={memories} onChange={(e) => setMemories(e.target.value)} placeholder="Ce qu'on a aimé, ce qu'on referait, les bonnes adresses…" />
+          </section>
+        </>
+      )}
+      {offline && <p className="hint">Modifier un voyage nécessite le réseau. Les vols et logements, eux, peuvent s'ajouter hors ligne.</p>}
+    </>
+  );
 
   if (form?.mode === "new") {
     return (
       <Sheet open title="Nouveau voyage" onClose={close}
-        footer={<button className="btn primary" disabled={busy || !name.trim() || notion.state === "offline"}
-          onClick={() => guard(async () => { await notion.saveTrip({ name: name.trim(), start: start || null, end: end || null }); toast("Voyage créé dans Notion"); close(); })}>Créer le voyage</button>}>
-        <section>
-          <label className="lbl" htmlFor="tName">Nom</label>
-          <input id="tName" className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Marrakech" autoComplete="off" />
-        </section>
-        <section className="two">
-          <div><label className="lbl" htmlFor="tStart">Départ</label><input id="tStart" type="date" className="field" value={start} onChange={(e) => setStart(e.target.value)} /></div>
-          <div><label className="lbl" htmlFor="tEnd">Retour</label><input id="tEnd" type="date" className="field" value={end} onChange={(e) => setEnd(e.target.value)} /></div>
-        </section>
-        {notion.state === "offline" && <p className="hint">Un nouveau voyage nécessite le réseau. Les vols et logements, eux, peuvent s'ajouter hors ligne.</p>}
+        footer={<button className="btn primary" disabled={busy || !name.trim() || offline}
+          onClick={() => guard(async () => { await notion.saveTrip(fields); toast("Voyage créé"); close(); })}>Créer le voyage</button>}>
+        {editor}
       </Sheet>
     );
   }
 
   const transports = trip ? notion.transports.filter((x) => x.tripId === trip.id).sort((a, b) => String(a.start ?? "").localeCompare(String(b.start ?? ""))) : [];
   const lodgings = trip ? notion.lodgings.filter((x) => x.tripId === trip.id).sort((a, b) => String(a.start ?? "").localeCompare(String(b.start ?? ""))) : [];
+  const cd = trip ? countdown(trip) : null;
+
+  const saveRes = (r: ReservationInput) => guard(async () => {
+    if (adding?.editId) { await notion.updateReservation(r, adding.editId); toast("Modifié"); }
+    else toast((await notion.addReservation(r)) ? (r.kind === "transport" ? "Transport ajouté" : "Logement ajouté") : SAVED_LATER);
+    setAdding(null);
+  });
+  const remove = (kind: "transport" | "lodging", id: string, label: string) => {
+    if (!window.confirm(`Supprimer « ${label} » ?`)) return;
+    void guard(async () => { await notion.deleteReservation(kind, id); toast("Supprimé"); });
+  };
+  const editT = adding?.kind === "transport" && adding.editId ? transports.find((x) => x.id === adding.editId) : undefined;
+  const editL = adding?.kind === "lodging" && adding.editId ? lodgings.find((x) => x.id === adding.editId) : undefined;
 
   return (
-    <Sheet open={!!trip} title={trip?.name ?? ""} onClose={close}>
-      {trip && (
+    <Sheet open={!!trip} title={trip?.name ?? ""} onClose={close}
+      footer={editing ? (
+        <div className="foot-row">
+          <button className="btn ghost" onClick={() => { load(trip); setEditing(false); }}>Annuler</button>
+          <button className="btn primary" disabled={busy || !name.trim() || offline}
+            onClick={() => guard(async () => { await notion.saveTrip(fields, trip!.id); toast("Voyage mis à jour"); setEditing(false); })}>Enregistrer</button>
+        </div>
+      ) : undefined}>
+      {trip && editing && editor}
+      {trip && !editing && (
         <>
           <section>
-            <div className="lbl">Statut</div>
-            <div className="segs" role="radiogroup" aria-label="Statut du voyage">
-              {STATUSES.map((s) => (
-                <button key={s} role="radio" aria-checked={trip.status === s} disabled={busy || notion.state === "offline"}
-                  onClick={() => guard(async () => { await notion.saveTrip({ status: s }, trip.id); })}>{s}</button>
-              ))}
-            </div>
-            {trip.start && <p className="hint">{dateRange(trip.start, trip.end)}{tripDays(trip) != null ? ` · ${tripDays(trip)} jours` : ""}</p>}
+            {cd && <div className="countdown big">{cd}</div>}
+            <p className="hint" style={{ marginTop: 0 }}>
+              {trip.status} {trip.start ? `· ${dateRange(trip.start, trip.end)}` : ""}{tripDays(trip) != null ? ` · ${tripDays(trip)} jours` : ""}
+            </p>
+            {trip.budget != null && <p className="hint">Budget prévu : {euros(trip.budget)}</p>}
+            {trip.status === "Visité" && <Stars value={trip.rating} />}
+            {trip.memories && <p className="memo">{trip.memories}</p>}
+            <button className="btn ghost" onClick={() => { load(trip); setEditing(true); }}>Modifier le voyage</button>
           </section>
           <section>
             <div className="lbl">Vols et transports</div>
             {transports.length === 0 && <p className="hint">Rien d'enregistré.</p>}
-            {transports.map((x) => <TransportRow key={x.id} x={x} />)}
-            {adding === "transport" ? (
-              <TransportForm tripId={trip.id} busy={busy} onCancel={() => setAdding(null)}
-                onSave={(r) => guard(async () => { toast((await notion.addReservation(r)) ? "Transport ajouté" : SAVED_LATER); setAdding(null); })} />
-            ) : <button className="add-proj" onClick={() => setAdding("transport")}>+ Ajouter un vol ou un transport</button>}
+            {transports.map((x) => (
+              <TransportRow key={x.id} x={x} disabled={offline || busy}
+                onEdit={() => setAdding({ kind: "transport", editId: x.id })} onDelete={() => remove("transport", x.id, x.name)} />
+            ))}
+            {adding?.kind === "transport" ? (
+              <TransportForm key={adding.editId ?? "new"} tripId={trip.id} initial={editT} busy={busy} onCancel={() => setAdding(null)} onSave={saveRes} />
+            ) : <button className="add-proj" onClick={() => setAdding({ kind: "transport" })}>+ Ajouter un vol ou un transport</button>}
           </section>
           <section>
             <div className="lbl">Logements</div>
             {lodgings.length === 0 && <p className="hint">Rien d'enregistré.</p>}
-            {lodgings.map((x) => <LodgingRow key={x.id} x={x} />)}
-            {adding === "lodging" ? (
-              <LodgingForm tripId={trip.id} busy={busy} onCancel={() => setAdding(null)}
-                onSave={(r) => guard(async () => { toast((await notion.addReservation(r)) ? "Logement ajouté" : SAVED_LATER); setAdding(null); })} />
-            ) : <button className="add-proj" onClick={() => setAdding("lodging")}>+ Ajouter un logement</button>}
+            {lodgings.map((x) => (
+              <LodgingRow key={x.id} x={x} disabled={offline || busy}
+                onEdit={() => setAdding({ kind: "lodging", editId: x.id })} onDelete={() => remove("lodging", x.id, x.name)} />
+            ))}
+            {adding?.kind === "lodging" ? (
+              <LodgingForm key={adding.editId ?? "new"} tripId={trip.id} initial={editL} busy={busy} onCancel={() => setAdding(null)} onSave={saveRes} />
+            ) : <button className="add-proj" onClick={() => setAdding({ kind: "lodging" })}>+ Ajouter un logement</button>}
           </section>
           {trip.url && <a className="link" href={trip.url} target="_blank" rel="noopener">Ouvrir dans Notion ↗</a>}
         </>
@@ -154,34 +248,44 @@ function TripSheet({ form, onClose, notion, toast }: { form: Form; onClose: () =
   );
 }
 
-function TransportRow({ x }: { x: Transport }) {
+function RowActions({ onEdit, onDelete, disabled }: { onEdit: () => void; onDelete: () => void; disabled: boolean }) {
+  return (
+    <span className="row-actions">
+      <button disabled={disabled} onClick={onEdit}>Modifier</button>
+      <button disabled={disabled} onClick={onDelete}>Supprimer</button>
+    </span>
+  );
+}
+
+function TransportRow({ x, onEdit, onDelete, disabled }: { x: Transport; onEdit: () => void; onDelete: () => void; disabled: boolean }) {
   return (
     <div className="resa">
       <b>{x.name}</b>
       <span>{[x.type, x.company, when(x.start), x.reference && `réf. ${x.reference}`, x.cost != null && euros(x.cost)].filter(Boolean).join(" · ")}</span>
+      <RowActions onEdit={onEdit} onDelete={onDelete} disabled={disabled} />
     </div>
   );
 }
-function LodgingRow({ x }: { x: Lodging }) {
+function LodgingRow({ x, onEdit, onDelete, disabled }: { x: Lodging; onEdit: () => void; onDelete: () => void; disabled: boolean }) {
   return (
     <div className="resa">
       <b>{x.name}</b>
       <span>{[x.type, x.address, x.start && dateRange(x.start.slice(0, 10), x.end?.slice(0, 10) ?? null), x.cost != null && euros(x.cost)].filter(Boolean).join(" · ")}</span>
+      <RowActions onEdit={onEdit} onDelete={onDelete} disabled={disabled} />
     </div>
   );
 }
 
-const num = (s: string) => (s.trim() === "" ? null : Math.max(0, Number(s.replace(",", ".")) || 0));
-type Save = (r: import("../lib/queue").ReservationInput) => void;
+type Save = (r: ReservationInput) => void;
 
-function TransportForm({ tripId, busy, onSave, onCancel }: { tripId: string; busy: boolean; onSave: Save; onCancel: () => void }) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState<TransportType>("Avion");
-  const [company, setCompany] = useState("");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
-  const [reference, setReference] = useState("");
-  const [cost, setCost] = useState("");
+function TransportForm({ tripId, initial, busy, onSave, onCancel }: { tripId: string; initial?: Transport; busy: boolean; onSave: Save; onCancel: () => void }) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [type, setType] = useState<TransportType>(initial?.type ?? "Avion");
+  const [company, setCompany] = useState(initial?.company ?? "");
+  const [start, setStart] = useState(initial?.start ?? "");
+  const [end, setEnd] = useState(initial?.end ?? "");
+  const [reference, setReference] = useState(initial?.reference ?? "");
+  const [cost, setCost] = useState(initial?.cost != null ? String(initial.cost) : "");
   return (
     <div className="resa-form">
       <input className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Paris → Marrakech (AF1277)" aria-label="Intitulé" />
@@ -200,19 +304,21 @@ function TransportForm({ tripId, busy, onSave, onCancel }: { tripId: string; bus
       <div className="foot-row">
         <button className="btn ghost" onClick={onCancel}>Annuler</button>
         <button className="btn primary" disabled={busy || !name.trim()}
-          onClick={() => onSave({ kind: "transport", tripId, name: name.trim(), type, company: company.trim(), start: start || null, end: end || null, reference: reference.trim(), cost: num(cost) })}>Ajouter</button>
+          onClick={() => onSave({ kind: "transport", tripId, name: name.trim(), type, company: company.trim(), start: start || null, end: end || null, reference: reference.trim(), cost: num(cost) })}>
+          {initial ? "Enregistrer" : "Ajouter"}
+        </button>
       </div>
     </div>
   );
 }
 
-function LodgingForm({ tripId, busy, onSave, onCancel }: { tripId: string; busy: boolean; onSave: Save; onCancel: () => void }) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState<LodgingType>("Hôtel");
-  const [address, setAddress] = useState("");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
-  const [cost, setCost] = useState("");
+function LodgingForm({ tripId, initial, busy, onSave, onCancel }: { tripId: string; initial?: Lodging; busy: boolean; onSave: Save; onCancel: () => void }) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [type, setType] = useState<LodgingType>(initial?.type ?? "Hôtel");
+  const [address, setAddress] = useState(initial?.address ?? "");
+  const [start, setStart] = useState(initial?.start?.slice(0, 10) ?? "");
+  const [end, setEnd] = useState(initial?.end?.slice(0, 10) ?? "");
+  const [cost, setCost] = useState(initial?.cost != null ? String(initial.cost) : "");
   return (
     <div className="resa-form">
       <input className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du logement" aria-label="Nom" />
@@ -228,7 +334,9 @@ function LodgingForm({ tripId, busy, onSave, onCancel }: { tripId: string; busy:
       <div className="foot-row">
         <button className="btn ghost" onClick={onCancel}>Annuler</button>
         <button className="btn primary" disabled={busy || !name.trim()}
-          onClick={() => onSave({ kind: "lodging", tripId, name: name.trim(), type, address: address.trim(), start: start || null, end: end || null, cost: num(cost) })}>Ajouter</button>
+          onClick={() => onSave({ kind: "lodging", tripId, name: name.trim(), type, address: address.trim(), start: start || null, end: end || null, cost: num(cost) })}>
+          {initial ? "Enregistrer" : "Ajouter"}
+        </button>
       </div>
     </div>
   );
