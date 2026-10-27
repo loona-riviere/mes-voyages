@@ -113,3 +113,7 @@ très fréquenté avec « peu de monde » −5, paludisme avec enfants −12 (�
 L'onglet **Voyages** liste les voyages En cours, À venir (statut « À planifier ») et Faits. Une fiche permet de changer le statut et d'ajouter vols/transports (base Transports) et logements (base Hébergements), reliés au voyage. Créer ou changer le statut d'un voyage demande le réseau.
 
 Hors ligne, les envies, projets, vols et logements ajoutés ou modifiés sont gardés sur l'appareil (`mv-queue-v1`) et envoyés à Notion, dans l'ordre, au retour du réseau (ouverture de l'app, retour au premier plan ou bouton de synchronisation).
+
+## Déploiement
+
+Netlify construit et publie le site à chaque push sur `main` (dépôt GitHub public, aucun secret dedans : `NOTION_TOKEN` et `APP_PASSPHRASE` vivent dans les variables d'environnement Netlify).
