@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { MONTHS, RULES, WANT_LABEL, WANTS, type Rule, type Want } from "../data/catalogue";
+import { MONTH_SHORT, MONTHS, RULES, WANT_LABEL, WANTS, type Rule, type Want } from "../data/catalogue";
 import { Sheet } from "../components/Sheet";
 import { ResultCard } from "../components/ResultCard";
 import { CompareSheet, DetailSheet, resultKey, resultName } from "./Detail";
@@ -30,7 +30,7 @@ export function ChooseHeader({ criteria: c, openCriteria, projects, activeProjec
   /** "" = aucun projet, "new" = créer un projet */
   onPickProject: (id: string) => void;
 }) {
-  const months = c.months.length === 1 ? MONTHS[c.months[0]] : [...c.months].sort((a, b) => a - b).map((m) => MONTHS[m].slice(0, 3)).join(" · ");
+  const months = c.months.length === 1 ? MONTHS[c.months[0]] : [...c.months].sort((a, b) => a - b).map((m) => MONTH_SHORT[m]).join(" · ");
   const summary = [
     months,
     `${c.days} jours`,
@@ -73,11 +73,11 @@ export function CriteriaSheet({ open, onClose, criteria: c, setCriteria, count }
                 const next = toggle(c.months, i);
                 if (next.length) set({ months: next });
               }}>
-              {m.slice(0, 3)}
+              {MONTH_SHORT[i]}
             </button>
           ))}
         </div>
-        <p className="hint">Touche plusieurs mois si vous hésitez : chaque destination est notée sur son meilleur mois.</p>
+        <p className="hint">Tu hésites ? Choisis plusieurs mois : chaque destination est notée sur son meilleur.</p>
       </section>
       <section>
         <div className="lbl"><label htmlFor="days">Durée</label> <b>{c.days} jours</b></div>
