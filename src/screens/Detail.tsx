@@ -1,4 +1,4 @@
-import { MONTHS, WANT_LABEL, type Level } from "../data/catalogue";
+import { MONTHS, ORGANISATION_LABEL, WANT_LABEL, type Level } from "../data/catalogue";
 import { Sheet } from "../components/Sheet";
 import { ScoreBreakdown, scoreRows } from "../components/ScoreBreakdown";
 import { SeasonDots } from "../components/SeasonDots";
@@ -85,6 +85,10 @@ export function DetailSheet({ result: r, criteria: c, onClose, comparing, onTogg
                 <span className="dd-note">Vol A/R {euros(r.destination.flightPrice)} + {c.days} j × {r.destination.dailyBudget} €</span>
               </dd>
               <dt>Affluence</dt><dd>{["Peu fréquenté", "Moyenne", "Très fréquenté"][r.destination.crowd]}</dd>
+              {r.destination.organisation && (
+                <><dt>Organisation</dt><dd>{ORGANISATION_LABEL[r.destination.organisation]}{r.destination.organisationNote && <span className="dd-note">{r.destination.organisationNote}</span>}</dd></>
+              )}
+              {r.destination.wildlife && <><dt>Faune</dt><dd>{["", "Rencontres rares", "Belles rencontres", "Grande faune quasi sûre"][r.destination.wildlife]}</dd></>}
               <dt>Paludisme</dt><dd>{r.destination.malaria === true ? "Oui, demander un avis médical" : r.destination.malaria === "partiel" ? "Dans une partie du pays" : "Non"}</dd>
               <dt>Envies</dt><dd>{r.destination.wants.map((w) => WANT_LABEL[w]).join(", ")}</dd>
               {trip && <><dt>Déjà fait</dt><dd>{trip.start?.slice(0, 4)}{trip.url && <> · <a href={trip.url} target="_blank" rel="noopener">Notion ↗</a></>}</dd></>}
@@ -231,6 +235,8 @@ export function CompareSheet({ open, results, criteria: c, notion, onClose, onRe
                   {fact("Jours conseillés", (r) => (r.kind === "destination" ? `${r.minDays} j` : r.idealDays ? `${r.idealDays} j` : "—"))}
                   {fact("Sur place", (r) => (r.kind === "destination" ? `${r.destination.dailyBudget} €/j` : "—"))}
                   {fact("Affluence", (r) => (r.kind === "destination" ? ["Faible", "Moyenne", "Forte"][r.destination.crowd] : "—"))}
+                  {results.some((r) => r.kind === "destination" && r.destination.organisation) && fact("Organisation", (r) => (r.kind === "destination" && r.destination.organisation ? ORGANISATION_LABEL[r.destination.organisation] : "—"))}
+                  {results.some((r) => r.kind === "destination" && r.destination.wildlife) && fact("Faune", (r) => (r.kind === "destination" && r.destination.wildlife ? ["", "Rare", "Belle", "Grande faune"][r.destination.wildlife] : "—"))}
                   {fact("Paludisme", (r) => (r.kind === "destination" ? (r.destination.malaria === true ? "Oui" : r.destination.malaria ? "En partie" : "Non") : "—"))}
                 </tbody>
               </table>

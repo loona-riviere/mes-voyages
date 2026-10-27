@@ -47,3 +47,15 @@ Les chiffres du catalogue sont des estimations pour un départ de Paris. À rev�
 
 ## Encore estimés
 Prix de vol pour Atacama & Uyuni, Fjords de Norvège, Cappadoce & Lycie, Andalousie, Sardaigne, Slovénie, Botswana et Ouganda (marqués « estimé » dans Notion). Vols directs non confirmés pour Ljubljana et Cagliari : comptés avec escale.
+
+## Organisation (agence ou autonomie) et intensité de la faune (octobre 2026)
+Avis de voyageurs et d'opérateurs, à confirmer auprès des autorités des parcs avant de réserver.
+- Tanzanie : [Safarifind, conduite en autonomie 2026](https://safarifind.com/blog/driving-in-tanzania-self-drive-rules-and-licence-2026), [forum Routard](https://www.routard.com/forums/t/les-parcs-nationaux-de-tanzanie-en-self-drive/473624)
+- Kenya (Masai Mara) : [Beyond the Bucket List](https://beyondthebucketlist.co/self-driving-maasai-mara/), [Business Daily Africa](https://www.businessdailyafrica.com/bd/lifestyle/motoring/private-cars-in-maasai-mara-facts-versus-misunderstanding-4692218)
+- Namibie et Kruger : [Responsible Travel](https://www.responsibletravel.com/holidays/self-drive-and-fly-drive/travel-guide/namibia), [Sunday Tribune](https://iol.co.za/sunday-tribune/travel/2023-07-14-top-5-self-drive-safari-destinations-in-southern-africa/)
+- Népal : [Amazing Nepal Trek](https://www.amazingnepaltrek.com/blog/nepal-trekking-permits-2025-a-local-experts-step-by-step-guide), [ExplorersWeb](https://explorersweb.com/nepals-independent-trekker-ban-disorganized-uncertain/)
+- Galápagos : [Goats on the Road](https://www.goatsontheroad.com/?p=63750), [Soleq](https://soleq.travel/galapagos-on-your-own-planning-and-arrival/)
+- Ouganda (permis gorilles) : [Monitor](https://www.monitor.co.ug/uganda/news/national/online-gorilla-permits-spark-anger-from-tourism-players-1551142)
+- Faune, Serengeti et Masai Mara : [Simba Pakasafaris](https://simbapakasafaris.com/guides/masai-mara-vs-serengeti-guide), [forum Routard Namibie, Tanzanie ou Kenya](https://www.routard.com/forums/t/safaris-namibie-tanzanie-ou-kenya/172232)
+
+Non renseignés faute de vérification : Mongolie, Madagascar, Atacama & Uyuni, Patagonie, Palawan.

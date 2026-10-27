@@ -99,7 +99,7 @@ Sur 100, chaque critère est gradué :
 | Critère | Points | Comment |
 | --- | --- | --- |
 | Saison | 25 | idéale 25, correcte 12, mauvaise 0 (meilleur des mois choisis) |
-| Envies | 25 | 20 au prorata des envies qui collent, +5 si le point fort du lieu en fait partie |
+| Envies | 25 | 20 au prorata des envies qui collent, +5 si le point fort du lieu en fait partie ; la faune compte pour 100 % si l'intensité est 3, 80 % si 2, 55 % si 1 |
 | Budget | 20 | plein dans le budget, −2 par tranche de 10 % de dépassement |
 | Trajet | 10 | plein si on reste au moins 1,5 × les jours conseillés, 7 si c'est juste, moins en dessous |
 | Calme | 10 | peu fréquenté 10, moyen 5, très fréquenté 0 |
@@ -107,6 +107,10 @@ Sur 100, chaque critère est gradué :
 
 Pénalités : déjà fait −15, plage en point fort alors qu'on n'en veut pas −20, aucune envie ne colle −5,
 très fréquenté avec « peu de monde » −5, paludisme avec enfants −12 (−5 si seulement une partie du pays).
+
+### Faune et organisation
+
+Dans la base Catalogue, **Intensité faune** (1 à 3) dit combien d'animaux on voit vraiment : 3 = grande faune quasi sûre (Kenya, Tanzanie, Botswana, Kruger, Galápagos), 2 = belles rencontres, 1 = rencontres rares. C'est un jugement tiré de comparatifs de voyageurs, pas une mesure. **Organisation** et **Organisation (détail)** indiquent s'il faut une agence (autonomie facile ou possible, agence conseillée ou obligatoire) ; ils sont affichés dans la fiche et dans « Comparer », et ne changent pas le score. Seules les destinations vérifiées sont renseignées.
 
 ## Voyages et hors ligne
 

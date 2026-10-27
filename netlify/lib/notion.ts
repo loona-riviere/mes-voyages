@@ -1,4 +1,4 @@
-import { MONTHS, RULES, WANT_FROM_LABEL, WANT_LABEL, WANTS, type Destination, type Level, type Rule, type Want } from "../../src/data/catalogue";
+import { MONTHS, RULES, WANT_FROM_LABEL, WANT_LABEL, WANTS, type Destination, type Level, type Organisation, type Rule, type Want } from "../../src/data/catalogue";
 import {
   PRIORITIES, WISH_STATUSES,
   LODGING_TYPES, TRANSPORT_TYPES,
@@ -174,6 +174,7 @@ export function toWish(p: Page): Wish {
   };
 }
 
+const ORGANISATION: Record<string, Organisation> = { "Seul facile": "easy", "Seul possible": "possible", "Agence conseillée": "advised", "Agence obligatoire": "required" };
 const CROWD: Record<string, Level> = { "Peu fréquenté": 0, "Moyenne": 1, "Très fréquenté": 2 };
 
 /** « Septembre : grande migration » sur chaque ligne → { 8: "grande migration" } */
@@ -213,6 +214,9 @@ export function toDestination(p: Page): Destination | null {
     season,
     crowd: CROWD[option(p, "Affluence") ?? ""] ?? 1,
     pitch: text(p, "Accroche"),
+    wildlife: ((n) => (n === 1 || n === 2 || n === 3 ? n : undefined))(num(p, "Intensité faune")),
+    organisation: ORGANISATION[option(p, "Organisation") ?? ""],
+    organisationNote: text(p, "Organisation (détail)") || undefined,
     malaria: malaria === "Oui" ? true : malaria === "En partie" ? "partiel" : false,
     highlights: parseHighlights(text(p, "Moments forts")),
     sources: text(p, "Sources") || undefined,

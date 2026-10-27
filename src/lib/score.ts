@@ -43,6 +43,8 @@ interface CoreInput {
   /** Durée idéale notée dans Notion (envie hors catalogue) */
   idealDays: number | null;
   crowd: Level | null;
+  /** Intensité de la faune (1 à 3) ; absent : sans effet sur le score */
+  wildlife?: number;
   wish: Wish | undefined;
 }
 
@@ -66,6 +68,9 @@ export interface CoreScore {
   parts: ScoreParts;
 }
 
+/** Part des points « faune » selon l'intensité du lieu */
+const WILDLIFE_WEIGHT: Record<number, number> = { 1: 0.55, 2: 0.8, 3: 1 };
+
 const sumParts = (p: ScoreParts) =>
   p.season + p.wants + p.budget + p.trip + p.calm + p.list + p.adjustments.reduce((s, a) => s + a.points, 0);
 
@@ -83,10 +88,12 @@ export function scoreCore(input: CoreInput, c: Criteria): CoreScore {
   parts.season = input.season === 2 ? WEIGHTS.season : input.season === 1 ? 12 : 0;
 
   // Envies : 20 points au prorata de ce qui colle, 5 si le point fort du lieu fait partie de vos envies.
+  // La faune compte moins là où on en voit peu (intensité 1 à 3).
+  const weight = (w: Want) => (w === "faune" && input.wildlife ? WILDLIFE_WEIGHT[input.wildlife] ?? 1 : 1);
   if (!c.wants.length) parts.wants = 20;
   else {
-    parts.wants = (20 * hits.length) / c.wants.length;
-    if (input.wants[0] && c.wants.includes(input.wants[0])) parts.wants += 5;
+    parts.wants = hits.reduce((sum, w) => sum + (20 * weight(w)) / c.wants.length, 0);
+    if (input.wants[0] && c.wants.includes(input.wants[0])) parts.wants += 5 * weight(input.wants[0]);
   }
 
   let over = 0;
@@ -177,7 +184,7 @@ export function scoreDestination(d: Destination, c: Criteria, ctx: { wish?: Wish
   const { month, level: season } = bestMonth(d.season, c.months);
   const cost = tripCost(d, c.days);
   const minDays = minDaysFor(d, c.months);
-  const core = scoreCore({ season, wants: d.wants, cost, minDays, idealDays: null, crowd: d.crowd, wish: ctx.wish }, c);
+  const core = scoreCore({ season, wants: d.wants, cost, minDays, idealDays: null, crowd: d.crowd, wildlife: d.wildlife, wish: ctx.wish }, c);
   const adj = core.parts.adjustments;
   if (ctx.trip) adj.push({ label: `Déjà fait en ${ctx.trip.start?.slice(0, 4) ?? "?"}`, points: -PENALTY.visited });
   if (c.rules.includes("kids") && d.malaria) {

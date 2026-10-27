@@ -82,8 +82,8 @@ describe("scoreCore", () => {
 });
 
 describe("scoreDestination", () => {
-  it("départage les trois safaris de septembre", () => {
-    expect(scoreDestination(dest("Namibie"), safari).score).toBe(87);
+  it("départage les trois safaris de septembre (la faune plus discrète de la Namibie lui coûte 3 points)", () => {
+    expect(scoreDestination(dest("Namibie"), safari).score).toBe(84);
     expect(scoreDestination(dest("Kenya"), safari).score).toBe(85);
     expect(scoreDestination(dest("Tanzanie"), safari).score).toBe(82);
   });
@@ -208,5 +208,20 @@ describe("explain", () => {
     expect(explain(r, { ...neutral, days: 8, budget: 1000 }).replace(/\s/g, " ")).toBe(
       "Mauvaise saison en mai, dépasse le budget d'environ 1 600 €, un peu loin pour 8 jours (12 conseillés).",
     );
+  });
+});
+
+describe("intensité de la faune", () => {
+  const dest = (name: string) => CATALOGUE.find((d) => d.name === name)!;
+  const faune: Criteria = { months: [8], days: 15, budget: 6000, wants: ["faune"], rules: [] };
+  it("classe la grande faune au-dessus d'une faune plus discrète", () => {
+    const kenya = scoreDestination(dest("Kenya"), faune);
+    const namibia = scoreDestination(dest("Namibie"), faune);
+    expect(kenya.parts.wants).toBeGreaterThan(namibia.parts.wants);
+    expect(namibia.parts.wants).toBeCloseTo(25 * 0.8, 5);
+  });
+  it("ne change rien quand on ne cherche pas la faune", () => {
+    const c: Criteria = { ...faune, wants: ["culture"] };
+    expect(scoreDestination(dest("Namibie"), c).parts.wants).toBe(scoreDestination({ ...dest("Namibie"), wildlife: undefined }, c).parts.wants);
   });
 });
