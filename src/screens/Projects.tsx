@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { RULES, WANT_LABEL, WANTS } from "../data/catalogue";
+import { AddFab } from "../components/AddFab";
 import { Sheet } from "../components/Sheet";
 import { euros } from "../lib/format";
 import { monthList, type Criteria } from "../lib/score";
@@ -36,24 +37,6 @@ function summary(c: Pick<Criteria, "months" | "wants" | "rules"> & { days: numbe
 }
 
 export type ProjectSheetState = { mode: "new" } | { mode: "edit"; id: string } | null;
-
-export function ProjectsRow({ projects, criteria, onApply, onEdit, onNew }: {
-  projects: Project[]; criteria: Criteria; onApply: (p: Project) => void; onEdit: (p: Project) => void; onNew: () => void;
-}) {
-  return (
-    <div className="row-scroll" aria-label="Projets">
-      {projects.map((p) => {
-        const active = isActive(p, criteria);
-        return (
-          <button key={p.id} className={`project${active ? " on" : ""}`} aria-pressed={active} onClick={() => (active ? onEdit(p) : onApply(p))}>
-            {p.status === "Choisi" && <span aria-label="Choisi">✓ </span>}{p.name}
-          </button>
-        );
-      })}
-      <button className="project add" onClick={onNew}>+ Projet</button>
-    </div>
-  );
-}
 
 export function ProjectSheet({ state, onClose, criteria, notion, toast }: {
   state: ProjectSheetState; onClose: () => void; criteria: Criteria; notion: NotionData; toast: (m: string) => void;
@@ -137,16 +120,15 @@ export function ProjectsTab({ notion, onApply, onEdit, onNew }: {
   const archived = by("Archivé");
   return (
     <div className="screen">
-      <div className="sum"><b>{toChoose.length + chosen.length} projet{toChoose.length + chosen.length > 1 ? "s" : ""}</b><span>{chosen.length} choisi{chosen.length > 1 ? "s" : ""}</span></div>
       {notion.projects.length === 0 && notion.state === "loading" && <div className="empty">Chargement de tes projets…</div>}
       {notion.projects.length === 0 && notion.state !== "loading" && (
         <div className="empty">Aucun projet pour l'instant. Un projet garde des critères (mois, durée, budget, envies) pour les retrouver d'un toucher.</div>
       )}
-      {toChoose.length > 0 && <div className="group-h">À choisir</div>}
+      {toChoose.length > 0 && chosen.length > 0 && <div className="group-h">À choisir</div>}
       {toChoose.map((p) => <ProjectCard key={p.id} p={p} onApply={onApply} onEdit={onEdit} />)}
-      {chosen.length > 0 && <div className="group-h">Choisis</div>}
+      {chosen.length > 0 && toChoose.length > 0 && <div className="group-h">Choisis</div>}
       {chosen.map((p) => <ProjectCard key={p.id} p={p} onApply={onApply} onEdit={onEdit} />)}
-      <button className="add-proj" onClick={onNew}>+ Nouveau projet</button>
+      <AddFab label="Nouveau projet" onClick={onNew} />
       {archived.length > 0 && (
         <>
           <button className="fold" aria-expanded={showArchived} onClick={() => setShowArchived(!showArchived)}>

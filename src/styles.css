@@ -371,3 +371,26 @@ section.two { display: grid; }
 .todo .done { text-decoration: line-through; color: var(--muted); }
 .todo button { border: 0; background: none; font-size: 20px; color: var(--muted); padding: 4px 8px; }
 .todo-add { margin-top: 8px; }
+
+/* Simplification : un seul « + » flottant, liens discrets, cartes plus légères */
+.fab {
+  position: fixed; right: max(16px, calc(50% - 280px + 16px)); bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom, 0px)); z-index: 35;
+  width: 54px; height: 54px; border-radius: 50%; border: 0; background: var(--accent); color: var(--on-accent);
+  display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0, 0, 0, .22);
+}
+.fab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.is-typing .fab, .sheet-open .fab { display: none; }
+.text-btn { border: 0; background: none; padding: 8px 0; font: 600 14.5px var(--body); color: var(--accent-ink); text-align: left; }
+.text-btn:disabled { opacity: .5; }
+.fold-sec { border-top: 1px solid var(--line); padding: 12px 0; }
+.fold-sec > summary { cursor: pointer; list-style: none; margin-bottom: 0; }
+.fold-sec > summary::-webkit-details-marker { display: none; }
+.fold-sec[open] > summary { margin-bottom: 8px; }
+.wmeta .countdown { padding: 3px 10px; }
+
+/* En-tête « Choisir » : un résumé des critères et un sélecteur de projet, sans défilement horizontal */
+.crit-head { display: grid; gap: 8px; }
+.crit-sum { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; width: 100%; padding: 11px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 600 15px/1.3 var(--body); }
+.crit-sum i { font: 600 13px var(--body); font-style: normal; color: var(--accent-ink); flex: none; }
+.proj-pick { width: 100%; font: 600 14px var(--body); padding: 9px 12px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--muted); }
+.tabbar { padding-bottom: calc(2px + env(safe-area-inset-bottom, 0px) * .6); }

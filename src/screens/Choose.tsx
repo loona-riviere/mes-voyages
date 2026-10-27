@@ -6,6 +6,7 @@ import { CompareSheet, DetailSheet, resultKey, resultName } from "./Detail";
 import { roundTo50 } from "../lib/format";
 import { rank, tripCost, type Criteria, type DestinationResult } from "../lib/score";
 import type { NotionData } from "../lib/useNotion";
+import type { Project } from "../shared/types";
 
 const SHORT: Record<Want, string> = {
   plage: "Plage", nature: "Nature", faune: "Faune", rando: "Rando", plongee: "Plongée",
@@ -22,24 +23,33 @@ interface Props {
 
 const toggle = <T,>(list: readonly T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
-export function ChooseHeader({ criteria: c, openCriteria }: Pick<Props, "criteria"> & { openCriteria: () => void }) {
+export function ChooseHeader({ criteria: c, openCriteria, projects, activeProject, onPickProject }: Pick<Props, "criteria"> & {
+  openCriteria: () => void;
+  projects: Project[];
+  activeProject: string;
+  /** "" = aucun projet, "new" = créer un projet */
+  onPickProject: (id: string) => void;
+}) {
+  const months = c.months.length === 1 ? MONTHS[c.months[0]] : [...c.months].sort((a, b) => a - b).map((m) => MONTHS[m].slice(0, 3)).join(" · ");
+  const summary = [
+    months,
+    `${c.days} jours`,
+    `${c.budget.toLocaleString("fr-FR")} €`,
+    c.wants.length ? c.wants.map((w) => SHORT[w]).join(", ") : null,
+    c.rules.length ? `${c.rules.length} contrainte${c.rules.length > 1 ? "s" : ""}` : null,
+  ].filter(Boolean);
   return (
-    <>
-      <div className="row-scroll" aria-label="Critères">
-        <button className="pill on" onClick={openCriteria}>
-          {c.months.length === 1 ? MONTHS[c.months[0]] : [...c.months].sort((a, b) => a - b).map((m) => MONTHS[m].slice(0, 3)).join(" · ")}
-        </button>
-        <button className="pill" onClick={openCriteria}>{c.days} jours</button>
-        <button className="pill" onClick={openCriteria}>{c.budget.toLocaleString("fr-FR")} €</button>
-        <button className="pill" onClick={openCriteria}>
-          {c.wants.length ? SHORT[c.wants[0]] : "Toutes envies"}
-          {c.wants.length > 1 && <span className="n">+{c.wants.length - 1}</span>}
-        </button>
-        <button className="pill" onClick={openCriteria}>
-          {c.rules.length ? <>Contraintes <span className="n">{c.rules.length}</span></> : "Sans contrainte"}
-        </button>
-      </div>
-    </>
+    <div className="crit-head">
+      <button className="crit-sum" onClick={openCriteria} aria-label="Modifier les critères">
+        <span>{summary.join(" · ")}</span>
+        <i>Modifier</i>
+      </button>
+      <select className="proj-pick" aria-label="Projet" value={activeProject} onChange={(e) => onPickProject(e.target.value)}>
+        <option value="">Sans projet</option>
+        {projects.map((p) => <option key={p.id} value={p.id}>{p.status === "Choisi" ? "✓ " : ""}{p.name}</option>)}
+        <option value="new">+ Nouveau projet…</option>
+      </select>
+    </div>
   );
 }
 

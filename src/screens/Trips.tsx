@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AddFab } from "../components/AddFab";
 import { Sheet } from "../components/Sheet";
 import { DEFAULT_CHECKLIST, parseChecklist, serializeChecklist } from "../lib/checklist";
 import { MONTHS } from "../data/catalogue";
@@ -54,14 +55,16 @@ export function Trips({ notion, toast }: { notion: NotionData; toast: (m: string
 
   return (
     <div className="screen">
-      <div className="stats">
-        <div className="stat"><small>Voyages faits</small><b>{done.length}</b></div>
-        <div className="stat"><small>Jours</small><b>{totalDays}</b></div>
-        <div className="stat"><small>Budget</small><b>{totalBudget >= 1000 ? `${Math.round(totalBudget / 1000)} k€` : euros(totalBudget)}</b></div>
-      </div>
+      {done.length > 0 && (
+        <div className="stats">
+          <div className="stat"><small>Voyages faits</small><b>{done.length}</b></div>
+          <div className="stat"><small>Jours</small><b>{totalDays}</b></div>
+          <div className="stat"><small>Budget</small><b>{totalBudget >= 1000 ? `${Math.round(totalBudget / 1000)} k€` : euros(totalBudget)}</b></div>
+        </div>
+      )}
       {notion.trips.length === 0 && notion.state === "loading" && <div className="empty">Chargement de tes voyages…</div>}
-      <button className="add-proj" onClick={() => setForm({ mode: "new" })}>+ Nouveau voyage</button>
-      {notion.trips.length > 0 && (
+      <AddFab label="Nouveau voyage" onClick={() => setForm({ mode: "new" })} />
+      {notion.trips.length > 1 && (
         <div className="segs" role="radiogroup" aria-label="Affichage">
           <button role="radio" aria-checked={view === "list"} onClick={() => setView("list")}>Liste</button>
           <button role="radio" aria-checked={view === "calendar"} onClick={() => setView("calendar")}>Calendrier</button>
@@ -143,14 +146,12 @@ function TripItem({ t, notion, onOpen }: { t: Trip; notion: NotionData; onOpen: 
         <h3>{t.name}</h3>
         {t.start && <span className="when">{dateRange(t.start, t.end)}</span>}
       </div>
-      {cd && <div className="countdown">{cd}</div>}
       <div className="wmeta">
+        {cd && <span className="countdown">{cd}</span>}
         {days != null && <span><b>{days} j</b></span>}
-        {t.budget != null && <span><b>{euros(t.budget)}</b> au total</span>}
-        {t.pricePerPerson != null && <span><b>{euros(t.pricePerPerson)}</b> / pers.</span>}
-        {t.dailyPerPerson != null && <span><b>{euros(t.dailyPerPerson)}</b> / jour</span>}
+        {t.budget != null && <span><b>{euros(t.budget)}</b></span>}
         {t.status === "Visité" && t.rating != null && <Stars value={t.rating} />}
-        {t.status !== "Visité" && <span>{flights} vol{flights > 1 ? "s" : ""} · {lodgings} logement{lodgings > 1 ? "s" : ""}</span>}
+        {t.status !== "Visité" && flights + lodgings === 0 && <span>Rien de réservé</span>}
       </div>
     </article>
   );
@@ -268,31 +269,29 @@ function TripSheet({ form, onClose, notion, toast }: { form: Form; onClose: () =
             {trip.budget != null && <p className="hint">Budget prévu : {euros(trip.budget)}</p>}
             {trip.status === "Visité" && <Stars value={trip.rating} />}
             {trip.memories && <p className="memo">{trip.memories}</p>}
-            <button className="btn ghost" onClick={() => { load(trip); setEditing(true); }}>Modifier le voyage</button>
+            <button className="text-btn" onClick={() => { load(trip); setEditing(true); }}>Modifier le voyage</button>
           </section>
-          {trip.status !== "Visité" && <Checklist trip={trip} notion={notion} toast={toast} />}
           <section>
             <div className="lbl">Vols et transports</div>
-            {transports.length === 0 && <p className="hint">Rien d'enregistré.</p>}
             {transports.map((x) => (
               <TransportRow key={x.id} x={x} disabled={offline || busy}
                 onEdit={() => setAdding({ kind: "transport", editId: x.id })} onDelete={() => remove("transport", x.id, x.name)} />
             ))}
             {adding?.kind === "transport" ? (
               <TransportForm key={adding.editId ?? "new"} tripId={trip.id} initial={editT} busy={busy} onCancel={() => setAdding(null)} onSave={saveRes} />
-            ) : <button className="add-proj" onClick={() => setAdding({ kind: "transport" })}>+ Ajouter un vol ou un transport</button>}
+            ) : <button className="text-btn" onClick={() => setAdding({ kind: "transport" })}>+ Ajouter un vol ou un transport</button>}
           </section>
           <section>
             <div className="lbl">Logements</div>
-            {lodgings.length === 0 && <p className="hint">Rien d'enregistré.</p>}
             {lodgings.map((x) => (
               <LodgingRow key={x.id} x={x} disabled={offline || busy}
                 onEdit={() => setAdding({ kind: "lodging", editId: x.id })} onDelete={() => remove("lodging", x.id, x.name)} />
             ))}
             {adding?.kind === "lodging" ? (
               <LodgingForm key={adding.editId ?? "new"} tripId={trip.id} initial={editL} busy={busy} onCancel={() => setAdding(null)} onSave={saveRes} />
-            ) : <button className="add-proj" onClick={() => setAdding({ kind: "lodging" })}>+ Ajouter un logement</button>}
+            ) : <button className="text-btn" onClick={() => setAdding({ kind: "lodging" })}>+ Ajouter un logement</button>}
           </section>
+          {trip.status !== "Visité" && <Checklist trip={trip} notion={notion} toast={toast} />}
           {trip.url && <a className="link" href={trip.url} target="_blank" rel="noopener">Ouvrir dans Notion ↗</a>}
         </>
       )}
@@ -308,9 +307,9 @@ function Checklist({ trip, notion, toast }: { trip: Trip; notion: NotionData; to
   };
   const done = items.filter((i) => i.done).length;
   return (
-    <section>
-      <div className="lbl">À faire avant le départ {items.length > 0 && <b>{done}/{items.length}</b>}</div>
-      {items.length === 0 && <button className="add-proj" disabled={notion.state === "offline"} onClick={() => save(DEFAULT_CHECKLIST.map((label) => ({ done: false, label })))}>Ajouter la liste type</button>}
+    <details className="fold-sec" open={items.length > 0 && done < items.length ? undefined : false}>
+      <summary className="lbl">À faire avant le départ {items.length > 0 && <b>{done}/{items.length}</b>}</summary>
+      {items.length === 0 && <button className="text-btn" disabled={notion.state === "offline"} onClick={() => save(DEFAULT_CHECKLIST.map((label) => ({ done: false, label })))}>Ajouter la liste type</button>}
       {items.map((it, i) => (
         <div key={i} className="todo">
           <label>
@@ -325,7 +324,7 @@ function Checklist({ trip, notion, toast }: { trip: Trip; notion: NotionData; to
           <input className="field" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ajouter une tâche" aria-label="Nouvelle tâche" />
         </form>
       )}
-    </section>
+    </details>
   );
 }
 

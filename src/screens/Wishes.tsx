@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { MONTH_LETTERS, MONTHS, WANTS } from "../data/catalogue";
+import { AddFab } from "../components/AddFab";
 import { Sheet } from "../components/Sheet";
 import { euros } from "../lib/format";
 import { PRIORITIES, WISH_STATUSES, type Kids, type Priority, type Wish, type WishPatch } from "../shared/types";
@@ -67,13 +68,13 @@ export function Wishes({ notion, filter, setFilter, onOpen, onNew }: {
   );
   return (
     <div className="screen">
-      <div className="sum">
-        <b>{list.length} envie{list.length > 1 ? "s" : ""}</b>
-        {isFiltered(filter)
-          ? <button className="reset" onClick={() => setFilter(NO_FILTER)}>Effacer les filtres ({notion.wishes.length - list.length} masquées)</button>
-          : <span>toutes tes envies</span>}
-      </div>
-      <button className="add-proj" onClick={onNew}>+ Nouvelle envie</button>
+      {isFiltered(filter) && (
+        <div className="sum">
+          <b>{list.length} envie{list.length > 1 ? "s" : ""}</b>
+          <button className="reset" onClick={() => setFilter(NO_FILTER)}>Effacer les filtres ({notion.wishes.length - list.length} masquées)</button>
+        </div>
+      )}
+      <AddFab label="Nouvelle envie" onClick={onNew} />
       {notion.wishes.length === 0 && notion.state === "loading" && <div className="empty">Chargement de tes envies…</div>}
       {notion.wishes.length > 0 && list.length === 0 && <div className="empty">Aucune envie ne correspond à ces filtres.</div>}
       {notion.wishes.length === 0 && notion.state === "ok" && (

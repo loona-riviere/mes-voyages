@@ -9,7 +9,7 @@ import { Choose, ChooseHeader, CriteriaSheet } from "./screens/Choose";
 import { Trips } from "./screens/Trips";
 import { Unlock } from "./screens/Unlock";
 import { NO_FILTER, WishForm, Wishes, WishesHeader, WishSheet, type WishFilter, type WishFormState } from "./screens/Wishes";
-import { applyProject, ProjectForm, ProjectSheet, ProjectsRow, ProjectsTab, type ProjectSheetState } from "./screens/Projects";
+import { applyProject, isActive, ProjectForm, ProjectSheet, ProjectsTab, type ProjectSheetState } from "./screens/Projects";
 
 const TITLES: Record<Tab, string> = { choose: "Où partir ?", wishes: "Envies", projects: "Projets", trips: "Voyages" };
 
@@ -39,6 +39,7 @@ export function App() {
   const openWish = useCallback((id: string) => setWishId(id), []);
   const closeCrit = useCallback(() => setCritOpen(false), []);
   const closeWish = useCallback(() => setWishId(null), []);
+  const liveProjects = useMemo(() => notion.projects.filter((p) => p.status !== "Archivé"), [notion.projects]);
   const count = useMemo(() => rank(criteria, notion).results.length, [criteria, notion]);
 
   if (notion.state === "locked") return <Unlock onUnlock={notion.unlock} error={notion.error} />;
@@ -63,17 +64,20 @@ export function App() {
           </div>
           {tab === "choose" && (
             <>
-              <ProjectsRow
-                projects={notion.projects.filter((p) => p.status !== "Archivé")}
+              <ChooseHeader
                 criteria={criteria}
-                onApply={(p) => { setCriteria(applyProject(p, criteria)); toast(p.name); }}
-                onEdit={(p) => setProjectSheet({ mode: "edit", id: p.id })}
-                onNew={() => setProjectSheet({ mode: "new" })}
+                openCriteria={() => setCritOpen(true)}
+                projects={liveProjects}
+                activeProject={liveProjects.find((p) => isActive(p, criteria))?.id ?? ""}
+                onPickProject={(id) => {
+                  if (id === "new") return setProjectSheet({ mode: "new" });
+                  const p = liveProjects.find((x) => x.id === id);
+                  if (p) { setCriteria(applyProject(p, criteria)); toast(p.name); }
+                }}
               />
-              <ChooseHeader criteria={criteria} openCriteria={() => setCritOpen(true)} />
             </>
           )}
-          {tab === "wishes" && <WishesHeader filter={filter} setFilter={setFilter} />}
+          {tab === "wishes" && notion.wishes.length > 5 && <WishesHeader filter={filter} setFilter={setFilter} />}
         </header>
         <main>
           {notion.state === "error" && notion.error && <div className="banner">{notion.error}</div>}

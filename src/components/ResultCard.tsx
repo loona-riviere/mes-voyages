@@ -1,4 +1,3 @@
-import { WANT_LABEL, type Want } from "../data/catalogue";
 import { euros, flightTime } from "../lib/format";
 import { highlight, prosCons, type Criteria, type Result } from "../lib/score";
 import { skyGradient } from "../lib/sky";
@@ -18,18 +17,13 @@ interface Props {
   onToggleCompare: () => void;
 }
 
-function Tags({ tags, hits }: { tags: readonly Want[]; hits: readonly Want[] }) {
-  return (
-    <div className="tags">
-      {tags.map((t) => (
-        <span key={t} className={`tag${hits.includes(t) ? " hit" : ""}`}>{WANT_LABEL[t]}</span>
-      ))}
-    </div>
-  );
-}
-
-export function ProsCons({ result, criteria }: { result: Result; criteria: Criteria }) {
-  const { pros, cons } = prosCons(result, criteria);
+export function ProsCons({ result, criteria, limit }: { result: Result; criteria: Criteria; limit?: number }) {
+  let { pros, cons } = prosCons(result, criteria);
+  if (limit) {
+    // Peu de lignes sur la carte : les points faibles d'abord, le reste est dans le détail.
+    cons = cons.slice(0, 1);
+    pros = pros.slice(0, Math.max(1, limit - cons.length));
+  }
   return (
     <ul className="pc">
       {pros.map((p) => <li key={p} className="pro"><span aria-label="Point fort">+</span>{p}</li>)}
@@ -92,8 +86,7 @@ export function ResultCard({ result: r, rank, criteria, onAdd, adding, onOpenWis
         </div>
         <SeasonDots season={season} months={criteria.months} />
         {highlight(r) && <p className="highlight">{highlight(r)}</p>}
-        <Tags tags={tags} hits={r.hits} />
-        <ProsCons result={r} criteria={criteria} />
+        <ProsCons result={r} criteria={criteria} limit={3} />
         <div className="card-actions">
           {r.kind === "destination" && !wish && onAdd && (
             <button className="btn" onClick={stop(onAdd)} disabled={adding}>
@@ -107,7 +100,6 @@ export function ResultCard({ result: r, rank, criteria, onAdd, adding, onOpenWis
             {comparing ? "✓ Comparer" : "+ Comparer"}
           </button>
         </div>
-        <span className="more-hint">Toucher pour le détail du score</span>
       </div>
     </article>
   );
