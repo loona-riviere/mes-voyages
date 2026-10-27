@@ -20,7 +20,7 @@ const wish = (over: Partial<Wish>): Wish => ({
 });
 const trip = (over: Partial<Trip>): Trip => ({
   id: "t1", url: "https://notion.so/t1", name: "Voyage", status: "Visité", start: "2024-08-01", end: "2024-08-15",
-  budget: null, days: null, pricePerPerson: null, dailyPerPerson: null, rating: null, memories: "", ...over,
+  budget: null, days: null, pricePerPerson: null, dailyPerPerson: null, rating: null, memories: "", checklist: "", ...over,
 });
 
 describe("catalogue", () => {

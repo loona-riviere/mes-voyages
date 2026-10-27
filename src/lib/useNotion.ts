@@ -30,6 +30,7 @@ export interface NotionData {
   addReservation: (r: ReservationInput) => Promise<boolean>;
   /** Création et modification d'un voyage : réseau nécessaire. */
   saveTrip: (t: TripInput, id?: string) => Promise<Trip>;
+  deleteWish: (id: string) => Promise<void>;
   /** Modifier ou supprimer une réservation déjà dans Notion : réseau nécessaire. */
   updateReservation: (r: ReservationInput, id: string) => Promise<void>;
   deleteReservation: (kind: "transport" | "lodging", id: string) => Promise<void>;
@@ -301,6 +302,12 @@ export function useNotion(): NotionData {
     return saved;
   }, []);
 
+  const deleteWish = useCallback(async (id: string) => {
+    if (!isLocalId(id)) await api.deleteWish(id);
+    setWishes((prev) => prev.filter((w) => w.id !== id));
+    setQueue(queue.current.filter((p) => !((p.kind === "wish-add" && p.localId === id) || (p.kind === "wish-patch" && p.id === id))));
+  }, []);
+
   const updateReservation = useCallback(async (input: ReservationInput, id: string) => {
     const saved = await api.updateReservation({ ...input, id });
     if (saved.transport) setTransports((prev) => prev.map((t) => (t.id === id ? saved.transport! : t)));
@@ -331,6 +338,6 @@ export function useNotion(): NotionData {
 
   return {
     wishes, trips, catalogue, projects, transports, lodgings, state, error, updatedAt, pending,
-    refresh, unlock, addWish, patchWish, saveProject, addReservation, saveTrip, updateReservation, deleteReservation,
+    refresh, unlock, addWish, patchWish, saveProject, addReservation, saveTrip, deleteWish, updateReservation, deleteReservation,
   };
 }

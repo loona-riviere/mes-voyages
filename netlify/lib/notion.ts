@@ -239,6 +239,7 @@ export function toTrip(p: Page): Trip {
     dailyPerPerson: num(p, "Budget / jour / pers"),
     rating: num(p, "Note"),
     memories: text(p, "Souvenirs"),
+    checklist: text(p, "Checklist"),
   };
 }
 
@@ -296,6 +297,21 @@ export function patchProperties(patch: WishPatch): Record<string, unknown> {
   const props: Record<string, unknown> = {};
   if (patch.priority !== undefined) props["Priorité"] = sel(check<Priority>(PRIORITIES, patch.priority, "Priorité"));
   if (patch.status !== undefined) props["Statut"] = sel(check<WishStatus>(WISH_STATUSES, patch.status, "Statut"));
+  if (patch.name !== undefined) props["Nom"] = { title: rich(requireName(patch.name)) };
+  if (patch.country !== undefined) props["Pays"] = { rich_text: patch.country ? rich(String(patch.country)) : [] };
+  if (patch.notes !== undefined) props["Notes"] = { rich_text: patch.notes ? rich(String(patch.notes)) : [] };
+  if (patch.wants !== undefined) props["Envies"] = { multi_select: patch.wants.map((w) => ({ name: check(WANT_LABELS, w, "Envies") })) };
+  if (patch.bestMonths !== undefined) {
+    props["Meilleurs mois"] = {
+      multi_select: patch.bestMonths.map((i) => {
+        if (!Number.isInteger(i) || i < 0 || i > 11) throw new InvalidInput("Mois invalide");
+        return { name: MONTHS[i] };
+      }),
+    };
+  }
+  if (patch.idealDays !== undefined) props["Durée idéale (jours)"] = { number: positive(patch.idealDays, "Durée") };
+  if (patch.budget !== undefined) props["Budget estimé / pers"] = { number: positive(patch.budget, "Budget") };
+  if (patch.kids !== undefined) props["Enfants"] = sel(patch.kids ? check(KIDS, patch.kids, "Enfants") : null);
   if (!Object.keys(props).length) throw new InvalidInput("Rien à modifier");
   return props;
 }
@@ -453,6 +469,7 @@ export function tripProperties(input: TripInput, creating: boolean): Record<stri
     if (input.rating !== null && !(Number.isInteger(input.rating) && input.rating >= 1 && input.rating <= 5)) throw new InvalidInput("Note invalide");
     props["Note"] = { number: input.rating };
   }
+  if (input.checklist !== undefined) props["Checklist"] = { rich_text: input.checklist ? rich(String(input.checklist)) : [] };
   if (input.memories !== undefined) props["Souvenirs"] = { rich_text: input.memories ? rich(String(input.memories)) : [] };
   if (!Object.keys(props).length) throw new InvalidInput("Rien à modifier");
   return props;

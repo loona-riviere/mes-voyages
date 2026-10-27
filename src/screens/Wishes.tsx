@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { MONTH_LETTERS, MONTHS } from "../data/catalogue";
+import { useEffect, useMemo, useState } from "react";
+import { MONTH_LETTERS, MONTHS, WANTS } from "../data/catalogue";
 import { Sheet } from "../components/Sheet";
 import { euros } from "../lib/format";
 import { PRIORITIES, WISH_STATUSES, type Kids, type Priority, type Wish, type WishPatch } from "../shared/types";
@@ -53,8 +53,10 @@ function MonthBar({ months, sel }: { months: number[]; sel?: number }) {
   );
 }
 
-export function Wishes({ notion, filter, setFilter, onOpen }: {
-  notion: NotionData; filter: WishFilter; setFilter: (f: WishFilter) => void; onOpen: (id: string) => void;
+export type WishFormState = { mode: "new" } | { mode: "edit"; id: string } | null;
+
+export function Wishes({ notion, filter, setFilter, onOpen, onNew }: {
+  notion: NotionData; filter: WishFilter; setFilter: (f: WishFilter) => void; onOpen: (id: string) => void; onNew: () => void;
 }) {
   const list = useMemo(
     () =>
@@ -71,10 +73,11 @@ export function Wishes({ notion, filter, setFilter, onOpen }: {
           ? <button className="reset" onClick={() => setFilter(NO_FILTER)}>Effacer les filtres ({notion.wishes.length - list.length} masquées)</button>
           : <span>toutes tes envies</span>}
       </div>
+      <button className="add-proj" onClick={onNew}>+ Nouvelle envie</button>
       {notion.wishes.length === 0 && notion.state === "loading" && <div className="empty">Chargement de tes envies…</div>}
       {notion.wishes.length > 0 && list.length === 0 && <div className="empty">Aucune envie ne correspond à ces filtres.</div>}
       {notion.wishes.length === 0 && notion.state === "ok" && (
-        <div className="empty">Ta liste est vide. Ajoute une destination depuis l'onglet Choisir.</div>
+        <div className="empty">Ta liste est vide. Ajoute une envie avec le bouton ci-dessus, ou depuis l'onglet Choisir.</div>
       )}
       {list.map((w) => (
         <button key={w.id} className="wish" onClick={() => onOpen(w.id)}>
@@ -110,7 +113,7 @@ function Segments<T extends string>({ label, values, value, onPick }: { label: s
   );
 }
 
-export function WishSheet({ wish, onClose, notion, toast }: { wish: Wish | null; onClose: () => void; notion: NotionData; toast: (m: string) => void }) {
+export function WishSheet({ wish, onClose, notion, toast, onEdit, onPlanned }: { wish: Wish | null; onClose: () => void; notion: NotionData; toast: (m: string) => void; onEdit: (id: string) => void; onPlanned: () => void }) {
   const [last, setLast] = useState<Wish | null>(wish);
   if (wish && wish !== last) setLast(wish);
   const w = wish ?? last;
@@ -125,12 +128,30 @@ export function WishSheet({ wish, onClose, notion, toast }: { wish: Wish | null;
     }
   };
 
+  const plan = async () => {
+    if (!w) return;
+    try {
+      await notion.saveTrip({ name: w.name, status: "À planifier" });
+      await notion.patchWish(w.id, { status: "Planifié" });
+      toast("Voyage créé : ajoute les dates et les réservations");
+      onClose();
+      onPlanned();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Création impossible");
+    }
+  };
+
   return (
     <Sheet
       open={!!wish}
       title={w?.name ?? ""}
       onClose={onClose}
-      footer={w?.url && <a className="btn ghost" href={w.url} target="_blank" rel="noopener">Ouvrir dans Notion ↗</a>}
+      footer={w && (
+        <div className="foot-row">
+          <button className="btn ghost" onClick={() => { onClose(); onEdit(w.id); }}>Modifier</button>
+          <button className="btn primary" disabled={notion.state === "offline"} onClick={plan}>Planifier un voyage</button>
+        </div>
+      )}
     >
       {w && (
         <>
@@ -149,8 +170,103 @@ export function WishSheet({ wish, onClose, notion, toast }: { wish: Wish | null;
             <dt>Enfants</dt><dd>{w.kids ?? "—"}</dd>
             {w.notes && <><dt>Notes</dt><dd className="notes">{w.notes}</dd></>}
           </dl>
+          {w.url && <a className="link" href={w.url} target="_blank" rel="noopener">Ouvrir dans Notion ↗</a>}
         </>
       )}
+    </Sheet>
+  );
+}
+
+const num = (s: string) => (s.trim() === "" ? null : Math.max(0, Number(s.replace(",", ".")) || 0));
+const flip = <T,>(list: readonly T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+const KIDS_VALUES = ["Sans enfants", "Avec enfants"] as const;
+
+export function WishForm({ state, onClose, notion, toast }: { state: WishFormState; onClose: () => void; notion: NotionData; toast: (m: string) => void }) {
+  const wish = state?.mode === "edit" ? notion.wishes.find((w) => w.id === state.id) : undefined;
+  const [name, setName] = useState("");
+  const [country, setCountry] = useState("");
+  const [wants, setWants] = useState<string[]>([]);
+  const [months, setMonths] = useState<number[]>([]);
+  const [days, setDays] = useState("");
+  const [budget, setBudget] = useState("");
+  const [kids, setKids] = useState<Kids | null>(null);
+  const [priority, setPriority] = useState<Priority>("Envie");
+  const [status, setStatus] = useState<Wish["status"]>("Idée");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!state) return;
+    setName(wish?.name ?? ""); setCountry(wish?.country ?? ""); setWants(wish?.wants ?? []); setMonths(wish?.bestMonths ?? []);
+    setDays(wish?.idealDays != null ? String(wish.idealDays) : ""); setBudget(wish?.budget != null ? String(wish.budget) : "");
+    setKids(wish?.kids ?? null); setPriority(wish?.priority ?? "Envie"); setStatus(wish?.status ?? "Idée"); setNotes(wish?.notes ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, wish?.id]);
+
+  const run = async (fn: () => Promise<boolean | void>, done: string) => {
+    setBusy(true);
+    try {
+      const sent = await fn();
+      toast(sent === false ? "Enregistré ici, envoyé à Notion au retour du réseau" : done);
+      onClose();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Enregistrement impossible");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const fields = { name: name.trim(), country: country.trim(), wants, bestMonths: months, idealDays: num(days), budget: num(budget), kids, notes: notes.trim() };
+
+  return (
+    <Sheet open={!!state} title={wish ? "Modifier l'envie" : "Nouvelle envie"} onClose={onClose}
+      footer={
+        <div className="foot-row">
+          {wish && (
+            <button className="btn ghost" disabled={busy || notion.state === "offline"}
+              onClick={() => window.confirm(`Supprimer « ${wish.name} » ?`) && void run(() => notion.deleteWish(wish.id), "Envie supprimée")}>Supprimer</button>
+          )}
+          <button className="btn primary" disabled={busy || !name.trim()}
+            onClick={() => run(async () => wish ? notion.patchWish(wish.id, { ...fields, priority, ...(status ? { status } : {}) }) : notion.addWish({ ...fields, priority, ...(status ? { status } : {}) }), wish ? "Envie mise à jour" : "Envie ajoutée")}>
+            {busy ? "Enregistrement…" : "Enregistrer"}
+          </button>
+        </div>
+      }>
+      <section>
+        <label className="lbl" htmlFor="wfName">Destination</label>
+        <input id="wfName" className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Japon" autoComplete="off" />
+      </section>
+      <section>
+        <label className="lbl" htmlFor="wfCountry">Pays</label>
+        <input id="wfCountry" className="field" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Facultatif" autoComplete="off" />
+      </section>
+      <section>
+        <div className="lbl">Ce qu'on y cherche</div>
+        <div className="chips">
+          {WANTS.map((w) => <button key={w.key} type="button" className="chip" aria-pressed={wants.includes(w.label)} onClick={() => setWants(flip(wants, w.label))}>{w.label}</button>)}
+        </div>
+      </section>
+      <section>
+        <div className="lbl">Meilleurs mois</div>
+        <div className="chips">
+          {MONTHS.map((m, i) => <button key={m} type="button" className="chip" aria-pressed={months.includes(i)} onClick={() => setMonths(flip(months, i).sort((a, b) => a - b))}>{m.slice(0, 4)}{m.length > 4 ? "." : ""}</button>)}
+        </div>
+      </section>
+      <section className="two">
+        <div><label className="lbl" htmlFor="wfDays">Durée idéale (j)</label><input id="wfDays" className="field" inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} /></div>
+        <div><label className="lbl" htmlFor="wfBudget">Budget / pers. (€)</label><input id="wfBudget" className="field" inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} /></div>
+      </section>
+      <Segments label="Priorité" values={PRIORITIES} value={priority} onPick={setPriority} />
+      <Segments label="Statut" values={WISH_STATUSES} value={status} onPick={setStatus} />
+      <section>
+        <div className="lbl">Enfants</div>
+        <div className="segs" role="radiogroup" aria-label="Enfants">
+          {KIDS_VALUES.map((k) => <button key={k} role="radio" aria-checked={kids === k} onClick={() => setKids(kids === k ? null : k)}>{k}</button>)}
+        </div>
+      </section>
+      <section>
+        <label className="lbl" htmlFor="wfNotes">Notes</label>
+        <textarea id="wfNotes" className="field textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Pourquoi cette envie, idées d'itinéraire…" />
+      </section>
     </Sheet>
   );
 }

@@ -43,6 +43,8 @@ export interface Trip {
   /** Note de 1 à 5 donnée après le voyage */
   rating: number | null;
   memories: string;
+  /** Une ligne par élément : « [x] libellé » */
+  checklist: string;
 }
 
 export type TransportType = "Avion" | "Train" | "Bus" | "Voiture" | "Moto" | "Vélo" | "Taxi" | "Bateau";
@@ -106,6 +108,7 @@ export interface TripInput {
   budget?: number | null;
   rating?: number | null;
   memories?: string;
+  checklist?: string;
 }
 
 export interface NewWish {
@@ -155,4 +158,12 @@ export interface ProjectInput {
 export interface WishPatch {
   priority?: Priority;
   status?: WishStatus;
+  name?: string;
+  country?: string;
+  wants?: string[];
+  bestMonths?: number[];
+  idealDays?: number | null;
+  budget?: number | null;
+  kids?: Kids | null;
+  notes?: string;
 }

@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Sheet } from "../components/Sheet";
+import { DEFAULT_CHECKLIST, parseChecklist, serializeChecklist } from "../lib/checklist";
+import { MONTHS } from "../data/catalogue";
 import { dateRange, euros } from "../lib/format";
 import type { ReservationInput } from "../lib/queue";
 import type { NotionData } from "../lib/useNotion";
@@ -30,6 +32,7 @@ type Form = { mode: "new" } | { mode: "view"; id: string } | null;
 
 export function Trips({ notion, toast }: { notion: NotionData; toast: (m: string) => void }) {
   const [form, setForm] = useState<Form>(null);
+  const [view, setView] = useState<"list" | "calendar">("list");
   const { current, upcoming, done, byYear } = useMemo(() => {
     const all = [...notion.trips];
     const done = all.filter((t) => t.status === "Visité").sort((a, b) => byStart(b, a));
@@ -58,7 +61,14 @@ export function Trips({ notion, toast }: { notion: NotionData; toast: (m: string
       </div>
       {notion.trips.length === 0 && notion.state === "loading" && <div className="empty">Chargement de tes voyages…</div>}
       <button className="add-proj" onClick={() => setForm({ mode: "new" })}>+ Nouveau voyage</button>
-      {current.length > 0 && (<><div className="year">En cours</div><div className="timeline">{current.map(card)}</div></>)}
+      {notion.trips.length > 0 && (
+        <div className="segs" role="radiogroup" aria-label="Affichage">
+          <button role="radio" aria-checked={view === "list"} onClick={() => setView("list")}>Liste</button>
+          <button role="radio" aria-checked={view === "calendar"} onClick={() => setView("calendar")}>Calendrier</button>
+        </div>
+      )}
+      {view === "calendar" && <YearCalendar trips={notion.trips} onOpen={(id) => setForm({ mode: "view", id })} />}
+      {view === "list" && <>{current.length > 0 && (<><div className="year">En cours</div><div className="timeline">{current.map(card)}</div></>)}
       {upcoming.length > 0 && (<><div className="year">À venir</div><div className="timeline">{upcoming.map(card)}</div></>)}
       {notion.state === "ok" && notion.trips.length === 0 && <div className="empty">Aucun voyage pour l'instant. Ajoute-en un avec le bouton ci-dessus, même un voyage déjà fait.</div>}
       {[...byYear].map(([year, trips]) => (
@@ -66,8 +76,49 @@ export function Trips({ notion, toast }: { notion: NotionData; toast: (m: string
           <div className="year">{year}</div>
           <div className="timeline">{trips.map(card)}</div>
         </div>
-      ))}
+      ))}</>}
       <TripSheet form={form} onClose={() => setForm(null)} notion={notion} toast={toast} />
+    </div>
+  );
+}
+
+function YearCalendar({ trips, onOpen }: { trips: Trip[]; onOpen: (id: string) => void }) {
+  const years = useMemo(() => {
+    const ys = new Set<number>([new Date().getFullYear()]);
+    for (const t of trips) for (const d of [t.start, t.end]) if (d) ys.add(Number(d.slice(0, 4)));
+    return [...ys].sort((a, b) => a - b);
+  }, [trips]);
+  const [year, setYear] = useState(() => {
+    const next = trips.filter((t) => t.status !== "Visité" && t.start).sort(byStart)[0];
+    return next?.start ? Number(next.start.slice(0, 4)) : new Date().getFullYear();
+  });
+  const touches = (t: Trip, m: number) => {
+    if (!t.start) return false;
+    const a = Date.parse(t.start);
+    const b = Date.parse(t.end ?? t.start);
+    return a < Date.UTC(year, m + 1, 1) && b >= Date.UTC(year, m, 1);
+  };
+  return (
+    <div className="cal">
+      <div className="segs" role="radiogroup" aria-label="Année">
+        {years.map((y) => <button key={y} role="radio" aria-checked={year === y} onClick={() => setYear(y)}>{y}</button>)}
+      </div>
+      {MONTHS.map((m, i) => {
+        const here = trips.filter((t) => touches(t, i)).sort(byStart);
+        return (
+          <div key={m} className="cal-row">
+            <span className="cal-m">{m.slice(0, 4)}{m.length > 4 ? "." : ""}</span>
+            <span className="cal-t">
+              {here.length === 0 && <i className="cal-empty">—</i>}
+              {here.map((t) => (
+                <button key={t.id} className={`cal-chip s${STATUSES.indexOf(t.status as TripStatus)}`} onClick={() => onOpen(t.id)}>
+                  {t.name}{t.start ? ` · ${dateRange(t.start, t.end)}` : ""}
+                </button>
+              ))}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -219,6 +270,7 @@ function TripSheet({ form, onClose, notion, toast }: { form: Form; onClose: () =
             {trip.memories && <p className="memo">{trip.memories}</p>}
             <button className="btn ghost" onClick={() => { load(trip); setEditing(true); }}>Modifier le voyage</button>
           </section>
+          {trip.status !== "Visité" && <Checklist trip={trip} notion={notion} toast={toast} />}
           <section>
             <div className="lbl">Vols et transports</div>
             {transports.length === 0 && <p className="hint">Rien d'enregistré.</p>}
@@ -245,6 +297,35 @@ function TripSheet({ form, onClose, notion, toast }: { form: Form; onClose: () =
         </>
       )}
     </Sheet>
+  );
+}
+
+function Checklist({ trip, notion, toast }: { trip: Trip; notion: NotionData; toast: (m: string) => void }) {
+  const items = parseChecklist(trip.checklist);
+  const [text, setText] = useState("");
+  const save = async (next: typeof items) => {
+    try { await notion.saveTrip({ checklist: serializeChecklist(next) }, trip.id); } catch (e) { toast(exact(e)); }
+  };
+  const done = items.filter((i) => i.done).length;
+  return (
+    <section>
+      <div className="lbl">À faire avant le départ {items.length > 0 && <b>{done}/{items.length}</b>}</div>
+      {items.length === 0 && <button className="add-proj" disabled={notion.state === "offline"} onClick={() => save(DEFAULT_CHECKLIST.map((label) => ({ done: false, label })))}>Ajouter la liste type</button>}
+      {items.map((it, i) => (
+        <div key={i} className="todo">
+          <label>
+            <input type="checkbox" checked={it.done} disabled={notion.state === "offline"} onChange={() => save(items.map((x, j) => (j === i ? { ...x, done: !x.done } : x)))} />
+            <span className={it.done ? "done" : ""}>{it.label}</span>
+          </label>
+          <button aria-label={`Retirer ${it.label}`} disabled={notion.state === "offline"} onClick={() => save(items.filter((_, j) => j !== i))}>×</button>
+        </div>
+      ))}
+      {items.length > 0 && (
+        <form className="todo-add" onSubmit={(e) => { e.preventDefault(); if (text.trim()) { void save([...items, { done: false, label: text.trim() }]); setText(""); } }}>
+          <input className="field" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ajouter une tâche" aria-label="Nouvelle tâche" />
+        </form>
+      )}
+    </section>
   );
 }
 

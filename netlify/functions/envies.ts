@@ -45,6 +45,16 @@ export default async (req: Request) => {
         });
         return json({ wish: toWish(page) });
       }
+      case "DELETE": {
+        const { id } = await body<{ id?: string }>(req);
+        if (!id || !PAGE_ID.test(id)) throw new InvalidInput("Identifiant invalide");
+        const current = await notion<Page & { parent?: { data_source_id?: string } }>(`/pages/${id}`);
+        if (current.parent?.data_source_id?.replace(/-/g, "") !== WISHES_DATA_SOURCE.replace(/-/g, "")) {
+          throw new InvalidInput("Cette page n'est pas une envie");
+        }
+        await notion<Page>(`/pages/${id}`, { method: "PATCH", body: { in_trash: true } });
+        return json({ ok: true });
+      }
       default:
         return json({ error: "Méthode non permise" }, 405);
     }
