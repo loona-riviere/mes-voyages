@@ -41,7 +41,7 @@ describe("lecture Notion", () => {
     expect(toWish(wishPage)).toEqual({
       id: "abc", url: "https://app.notion.com/p/abc", name: "Safari en Namibie", country: "Namibie",
       wants: ["Faune sauvage", "Désert"], bestMonths: [7, 8], idealDays: 15, budget: 4500,
-      kids: "Sans enfants", priority: "Très envie", status: null, notes: "Plutôt en 4x4", destinationId: "dest-1",
+      kids: "Sans enfants", priority: "Très envie", status: null, notes: "Plutôt en 4x4", destinationId: "dest-1", tripId: null,
     });
   });
 
@@ -184,5 +184,13 @@ describe("voyages et réservations", () => {
     expect(props["Référence"].rich_text).toEqual([]);
     expect(props["Date"]).toEqual({ date: null });
     expect(props["Coût"]).toEqual({ number: null });
+  });
+});
+
+describe("lien envie → voyage", () => {
+  it("relie et délie une envie d'un voyage", () => {
+    expect(patchProperties({ tripId: "406dac8e-ae8e-81d9-a9e1-e5a0de012d53" })["Voyage"]).toEqual({ relation: [{ id: "406dac8e-ae8e-81d9-a9e1-e5a0de012d53" }] });
+    expect(patchProperties({ tripId: null })["Voyage"]).toEqual({ relation: [] });
+    expect(() => patchProperties({ tripId: "pas-un-id" })).toThrow("Voyage invalide");
   });
 });

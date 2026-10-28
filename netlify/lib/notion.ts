@@ -171,6 +171,7 @@ export function toWish(p: Page): Wish {
     status: oneOf(WISH_STATUSES, option(p, "Statut")),
     notes: text(p, "Notes"),
     destinationId: relationIds(p, "Destination")[0] ?? null,
+    tripId: relationIds(p, "Voyage")[0] ?? null,
   };
 }
 
@@ -319,6 +320,10 @@ export function patchProperties(patch: WishPatch): Record<string, unknown> {
   }
   if (patch.idealDays !== undefined) props["Durée idéale (jours)"] = { number: positive(patch.idealDays, "Durée") };
   if (patch.budget !== undefined) props["Budget estimé / pers"] = { number: positive(patch.budget, "Budget") };
+  if (patch.tripId !== undefined) {
+    if (patch.tripId !== null && !PAGE_ID_RE.test(patch.tripId)) throw new InvalidInput("Voyage invalide");
+    props["Voyage"] = { relation: patch.tripId ? [{ id: patch.tripId }] : [] };
+  }
   if (patch.kids !== undefined) props["Enfants"] = sel(patch.kids ? check(KIDS, patch.kids, "Enfants") : null);
   if (!Object.keys(props).length) throw new InvalidInput("Rien à modifier");
   return props;

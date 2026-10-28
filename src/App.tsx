@@ -8,7 +8,7 @@ import { useNotion } from "./lib/useNotion";
 import { Choose, ChooseHeader, CriteriaSheet } from "./screens/Choose";
 import { Trips } from "./screens/Trips";
 import { Unlock } from "./screens/Unlock";
-import { NO_FILTER, WishForm, Wishes, WishesHeader, WishSheet, type WishFilter, type WishFormState } from "./screens/Wishes";
+import { isPlanned, NO_FILTER, WishForm, Wishes, WishesHeader, WishSheet, type WishFilter, type WishFormState } from "./screens/Wishes";
 import { applyProject, isActive, ProjectForm, ProjectSheet, ProjectsTab, type ProjectSheetState } from "./screens/Projects";
 
 const PROJECT_KEY = "mv-project-v1";
@@ -21,6 +21,8 @@ export function App() {
   const [tab, setTab] = useState<Tab>("choose");
   const [critOpen, setCritOpen] = useState(false);
   const [wishId, setWishId] = useState<string | null>(null);
+  const [openTripId, setOpenTripId] = useState<string | null>(null);
+  const clearOpenTrip = useCallback(() => setOpenTripId(null), []);
   const [wishForm, setWishForm] = useState<WishFormState>(null);
   const [filter, setFilter] = useState<WishFilter>(NO_FILTER);
   const [scrolled, setScrolled] = useState(false);
@@ -125,16 +127,16 @@ export function App() {
               onNew={() => setProjectForm({ mode: "new" })}
             />
           )}
-          {tab === "trips" && <Trips notion={notion} toast={toast} />}
+          {tab === "trips" && <Trips notion={notion} toast={toast} openId={openTripId} onOpened={clearOpenTrip} />}
         </main>
       </div>
-      <TabBar tab={tab} onChange={go} wishCount={notion.wishes.length} />
+      <TabBar tab={tab} onChange={go} wishCount={notion.wishes.filter((w) => !isPlanned(w)).length} />
       <ProjectForm state={projectForm} onClose={() => setProjectForm(null)} notion={notion} toast={toast} onPlanned={() => go("trips")} />
       <ProjectSheet state={projectSheet} onClose={() => setProjectSheet(null)} criteria={criteria} notion={notion} toast={toast} />
       <CriteriaSheet open={critOpen} onClose={closeCrit} criteria={criteria} setCriteria={setCriteria} count={count}
         modifiedProject={projectModified ? activeProject?.name : undefined} onSaveToProject={() => void saveToProject()} />
       <WishSheet wish={notion.wishes.find((w) => w.id === wishId) ?? null} onClose={closeWish} notion={notion} toast={toast}
-        onEdit={(id) => setWishForm({ mode: "edit", id })} onPlanned={() => go("trips")} />
+        onEdit={(id) => setWishForm({ mode: "edit", id })} onPlanned={(id) => { setOpenTripId(id); go("trips"); }} />
       <WishForm state={wishForm} onClose={() => setWishForm(null)} notion={notion} toast={toast} />
       {toastNode}
     </>

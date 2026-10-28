@@ -3,7 +3,7 @@ import { MONTH_LETTERS, MONTH_SHORT, MONTHS, WANTS } from "../data/catalogue";
 import { AddFab } from "../components/AddFab";
 import { Sheet } from "../components/Sheet";
 import { euros } from "../lib/format";
-import { PRIORITIES, WISH_STATUSES, type Kids, type Priority, type Wish, type WishPatch } from "../shared/types";
+import { PRIORITIES, WISH_STATUSES, type Kids, type Priority, type Trip, type Wish, type WishPatch } from "../shared/types";
 import type { NotionData } from "../lib/useNotion";
 
 export interface WishFilter {
@@ -54,11 +54,15 @@ function MonthBar({ months, sel }: { months: number[]; sel?: number }) {
   );
 }
 
+/** Une envie devenue voyage (planifiée ou reliée à un voyage) quitte la liste ; elle revient si on la délie. */
+export const isPlanned = (w: Wish) => w.status === "Planifié" || !!w.tripId;
+
 export type WishFormState = { mode: "new" } | { mode: "edit"; id: string } | null;
 
 export function Wishes({ notion, filter, setFilter, onOpen, onNew }: {
   notion: NotionData; filter: WishFilter; setFilter: (f: WishFilter) => void; onOpen: (id: string) => void; onNew: () => void;
 }) {
+  const [showPlanned, setShowPlanned] = useState(false);
   const list = useMemo(
     () =>
       notion.wishes
@@ -80,8 +84,24 @@ export function Wishes({ notion, filter, setFilter, onOpen, onNew }: {
       {notion.wishes.length === 0 && notion.state === "ok" && (
         <div className="empty">Ta liste est vide. Ajoute une envie avec le bouton ci-dessus, ou depuis l'onglet Choisir.</div>
       )}
-      {list.map((w) => (
-        <button key={w.id} className="wish" onClick={() => onOpen(w.id)}>
+      {list.filter((w) => !isPlanned(w)).map((w) => (
+        <WishCard key={w.id} w={w} filter={filter} onOpen={onOpen} />
+      ))}
+      {list.some(isPlanned) && (
+        <button className="fold" aria-expanded={showPlanned} onClick={() => setShowPlanned(!showPlanned)}>
+          {showPlanned ? "Masquer" : "Voir"} les envies devenues voyages ({list.filter(isPlanned).length})
+        </button>
+      )}
+      {showPlanned && list.filter(isPlanned).map((w) => (
+        <WishCard key={w.id} w={w} filter={filter} onOpen={onOpen} />
+      ))}
+    </div>
+  );
+}
+
+function WishCard({ w, filter, onOpen }: { w: Wish; filter: WishFilter; onOpen: (id: string) => void }) {
+  return (
+        <button className={`wish${w.status === "Planifié" ? " planned" : ""}`} onClick={() => onOpen(w.id)}>
           <div className="wish-top">
             <div>
               <h3>{w.name}</h3>
@@ -93,11 +113,9 @@ export function Wishes({ notion, filter, setFilter, onOpen, onNew }: {
           <div className="wmeta">
             <span><b>{w.idealDays ? `${w.idealDays} j` : "—"}</b> idéal</span>
             <span><b>{w.budget ? euros(w.budget) : "—"}</b> / pers.</span>
-            {w.status && <span>{w.status}</span>}
+            {w.status && w.status !== "Planifié" && <span>{w.status}</span>}
           </div>
         </button>
-      ))}
-    </div>
   );
 }
 
@@ -114,7 +132,16 @@ function Segments<T extends string>({ label, values, value, onPick }: { label: s
   );
 }
 
-export function WishSheet({ wish, onClose, notion, toast, onEdit, onPlanned }: { wish: Wish | null; onClose: () => void; notion: NotionData; toast: (m: string) => void; onEdit: (id: string) => void; onPlanned: () => void }) {
+const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+
+/** Voyage correspondant à une envie (même nom), le prochain d'abord. */
+export function tripFor(w: Pick<Wish, "name" | "tripId">, trips: readonly Trip[]): Trip | undefined {
+  if (w.tripId) return trips.find((t) => t.id === w.tripId);
+  const same = trips.filter((t) => norm(t.name) === norm(w.name));
+  return same.find((t) => t.status !== "Visité") ?? same[0];
+}
+
+export function WishSheet({ wish, onClose, notion, toast, onEdit, onPlanned }: { wish: Wish | null; onClose: () => void; notion: NotionData; toast: (m: string) => void; onEdit: (id: string) => void; onPlanned: (tripId: string) => void }) {
   const [last, setLast] = useState<Wish | null>(wish);
   if (wish && wish !== last) setLast(wish);
   const w = wish ?? last;
@@ -138,14 +165,16 @@ export function WishSheet({ wish, onClose, notion, toast, onEdit, onPlanned }: {
     }
   };
 
+  const linked = w ? tripFor(w, notion.trips) : undefined;
   const plan = async () => {
     if (!w) return;
     try {
-      await notion.saveTrip({ name: w.name, status: "À planifier" });
-      await notion.patchWish(w.id, { status: "Planifié" });
-      toast("Voyage créé : ajoute les dates et les réservations");
-      onClose();
-      onPlanned();
+      // Pas de doublon : si le voyage existe déjà, on l'ouvre.
+      const trip = linked ?? (await notion.saveTrip({ name: w.name, status: "À planifier" }));
+      await notion.patchWish(w.id, { status: "Planifié", tripId: trip.id });
+      toast(linked ? "Le voyage existe déjà" : "Voyage créé : ajoute les dates et les réservations");
+      closeSheet();
+      onPlanned(trip.id);
     } catch (e) {
       toast(e instanceof Error ? e.message : "Création impossible");
     }
@@ -159,7 +188,9 @@ export function WishSheet({ wish, onClose, notion, toast, onEdit, onPlanned }: {
       footer={w && (
         <div className="foot-row">
           <button className="btn ghost" onClick={() => { closeSheet(); onEdit(w.id); }}>Modifier</button>
-          <button className="btn primary" disabled={notion.state === "offline"} onClick={plan}>Planifier un voyage</button>
+          {linked
+            ? <button className="btn primary" onClick={() => { closeSheet(); onPlanned(linked.id); }}>Voir le voyage</button>
+            : <button className="btn primary" disabled={notion.state === "offline"} onClick={plan}>Planifier un voyage</button>}
         </div>
       )}
     >
@@ -179,6 +210,16 @@ export function WishSheet({ wish, onClose, notion, toast, onEdit, onPlanned }: {
             <dt>Budget / pers.</dt><dd>{w.budget ? euros(w.budget) : "—"}</dd>
             <dt>Enfants</dt><dd>{w.kids ?? "—"}</dd>
           </dl>
+          <section>
+            <label className="lbl" htmlFor="wishTrip">Voyage lié</label>
+            <select id="wishTrip" className="field" value={linked?.id ?? ""} disabled={notion.state === "offline"}
+              onChange={(e) => void save(e.target.value ? { tripId: e.target.value, status: "Planifié" } : { tripId: null, status: "En réflexion" })}>
+              <option value="">Aucun</option>
+              {[...notion.trips].sort((a, b) => String(b.start ?? "9999").localeCompare(String(a.start ?? "9999"))).map((t) => (
+                <option key={t.id} value={t.id}>{t.name}{t.start ? ` · ${t.start.slice(0, 4)}` : ""}{t.status === "Visité" ? " (fait)" : ""}</option>
+              ))}
+            </select>
+          </section>
           <section>
             <label className="lbl" htmlFor="wishNotes">Notes</label>
             <textarea id="wishNotes" className="field textarea notes-area" value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={saveNotes}

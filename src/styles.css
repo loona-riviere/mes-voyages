@@ -408,3 +408,4 @@ input[type="date"]::-webkit-date-and-time-value, input[type="datetime-local"]::-
 input[type="date"]::-webkit-calendar-picker-indicator, input[type="datetime-local"]::-webkit-calendar-picker-indicator { opacity: .6; }
 .danger-btn { border: 0; background: none; padding: 10px 0; font: 600 14.5px var(--body); color: var(--over); text-align: left; }
 .danger-btn:disabled { opacity: .5; }
+.wish.planned { opacity: .62; }

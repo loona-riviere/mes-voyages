@@ -212,9 +212,15 @@ export function ProjectForm({ state, onClose, notion, toast, onPlanned }: {
   /** Le projet est décidé : on crée le voyage et on marque le projet « Choisi ». */
   const plan = async () => {
     if (!project) return;
+    const dest = window.prompt("Quelle destination avez-vous choisie ?", "");
+    if (dest === null) return;
     setBusy(true);
     try {
-      await notion.saveTrip({ name: name.trim() || project.name, status: "À planifier" });
+      const trip = await notion.saveTrip({ name: dest.trim() || name.trim() || project.name, status: "À planifier" });
+      // Si cette destination était une envie, on la relie au voyage (elle quitte la liste d'envies).
+      const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+      const wish = notion.wishes.find((w) => norm(w.name) === norm(trip.name));
+      if (wish) await notion.patchWish(wish.id, { tripId: trip.id, status: "Planifié" });
       await notion.saveProject({ status: "Choisi" }, project.id);
       toast("Voyage créé : ajoute les dates et les réservations");
       onClose();

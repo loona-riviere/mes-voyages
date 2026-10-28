@@ -26,6 +26,8 @@ export interface Wish {
   notes: string;
   /** Page du catalogue liée dans Notion (propriété « Destination ») */
   destinationId: string | null;
+  /** Voyage lié dans Notion (propriété « Voyage ») */
+  tripId: string | null;
 }
 
 export interface Trip {
@@ -166,4 +168,6 @@ export interface WishPatch {
   budget?: number | null;
   kids?: Kids | null;
   notes?: string;
+  /** null pour délier */
+  tripId?: string | null;
 }

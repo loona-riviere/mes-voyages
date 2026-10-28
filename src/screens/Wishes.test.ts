@@ -4,7 +4,7 @@ import { isFiltered, matchesFilter, NO_FILTER } from "./Wishes";
 
 const wish = (over: Partial<Wish>): Wish => ({
   id: "w", url: "", name: "W", country: "", wants: [], bestMonths: [4], idealDays: null, budget: null,
-  kids: null, priority: null, status: null, notes: "", destinationId: null, ...over,
+  kids: null, priority: null, status: null, notes: "", destinationId: null, tripId: null, ...over,
 });
 
 describe("filtres des envies", () => {

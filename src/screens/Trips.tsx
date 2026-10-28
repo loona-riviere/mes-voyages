@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AddFab } from "../components/AddFab";
 import { Sheet } from "../components/Sheet";
 import { DEFAULT_CHECKLIST, parseChecklist, serializeChecklist } from "../lib/checklist";
@@ -31,8 +31,12 @@ export function countdown(t: Pick<Trip, "status" | "start" | "end">): string | n
 
 type Form = { mode: "new" } | { mode: "view"; id: string } | null;
 
-export function Trips({ notion, toast }: { notion: NotionData; toast: (m: string) => void }) {
+export function Trips({ notion, toast, openId, onOpened }: { notion: NotionData; toast: (m: string) => void; openId?: string | null; onOpened?: () => void }) {
   const [form, setForm] = useState<Form>(null);
+  // Ouverture demandée depuis une envie ou un projet.
+  useEffect(() => {
+    if (openId) { setForm({ mode: "view", id: openId }); onOpened?.(); }
+  }, [openId, onOpened]);
   const [view, setView] = useState<"list" | "calendar">("list");
   const { current, upcoming, done, byYear } = useMemo(() => {
     const all = [...notion.trips];
