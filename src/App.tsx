@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TabBar, type Tab } from "./components/TabBar";
 import { useToast } from "./components/Toast";
 import { ago } from "./lib/format";
 import { rank } from "./lib/score";
 import { useCriteria } from "./lib/useCriteria";
+import { localToday, nextStatus } from "./lib/tripStatus";
 import { useNotion } from "./lib/useNotion";
 import { Choose, ChooseHeader, CriteriaSheet } from "./screens/Choose";
 import { Trips } from "./screens/Trips";
@@ -43,6 +44,27 @@ export function App() {
   const openWish = useCallback((id: string) => setWishId(id), []);
   const closeCrit = useCallback(() => setCritOpen(false), []);
   const closeWish = useCallback(() => setWishId(null), []);
+  // Statut automatique d'après les dates (une fois par voyage et par ouverture de l'app).
+  const autoDone = useRef(new Set<string>());
+  useEffect(() => {
+    if (notion.state !== "ok") return;
+    const today = localToday();
+    const due = notion.trips.filter((t) => !autoDone.current.has(t.id) && nextStatus(t, today));
+    if (!due.length) return;
+    due.forEach((t) => autoDone.current.add(t.id));
+    void (async () => {
+      for (const t of due) {
+        const status = nextStatus(t, today)!;
+        try {
+          await notion.saveTrip({ status }, t.id);
+          toast(status === "Visité" ? `${t.name} est terminé : note-le dans Voyages` : `Bon voyage ! ${t.name} est en cours`);
+        } catch {
+          // réessayé à la prochaine ouverture
+        }
+      }
+    })();
+  }, [notion, notion.state, notion.trips, toast]);
+
   const liveProjects = useMemo(() => notion.projects.filter((p) => p.status !== "Archivé"), [notion.projects]);
   // Projet choisi dans « Choisir » : il reste choisi même si on change ensuite un critère.
   const [projectId, setProjectIdState] = useState<string>(() => {

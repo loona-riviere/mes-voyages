@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AddFab } from "../components/AddFab";
+import { ConfirmButton } from "../components/ConfirmButton";
 import { Sheet } from "../components/Sheet";
 import { DEFAULT_CHECKLIST, parseChecklist, serializeChecklist } from "../lib/checklist";
 import { MONTH_SHORT, MONTHS } from "../data/catalogue";
@@ -225,11 +226,14 @@ function TripSheet({ form, onClose, notion, toast }: { form: Form; onClose: () =
       )}
       {offline && <p className="hint">Modifier un voyage nécessite le réseau. Les vols et logements, eux, peuvent s'ajouter hors ligne.</p>}
       {trip && (
-        <button className="danger-btn" disabled={busy || offline} onClick={() => {
-          const n = notion.transports.filter((x) => x.tripId === trip.id).length + notion.lodgings.filter((x) => x.tripId === trip.id).length;
-          if (!window.confirm(`Supprimer « ${trip.name} »${n ? ` et ses ${n} réservation${n > 1 ? "s" : ""}` : ""} ? Il ira dans la corbeille Notion.`)) return;
-          void guard(async () => { await notion.deleteTrip(trip.id); toast("Voyage supprimé"); close(); });
-        }}>Supprimer ce voyage</button>
+        <ConfirmButton className="danger-btn" disabled={busy || offline}
+          confirmLabel={(() => {
+            const n = notion.transports.filter((x) => x.tripId === trip.id).length + notion.lodgings.filter((x) => x.tripId === trip.id).length;
+            return `Toucher encore : supprimer${n ? ` avec ${n} réservation${n > 1 ? "s" : ""}` : ""}`;
+          })()}
+          onConfirm={() => void guard(async () => { await notion.deleteTrip(trip.id); toast("Voyage supprimé (corbeille Notion)"); close(); })}>
+          Supprimer ce voyage
+        </ConfirmButton>
       )}
     </>
   );
@@ -253,10 +257,8 @@ function TripSheet({ form, onClose, notion, toast }: { form: Form; onClose: () =
     else toast((await notion.addReservation(r)) ? (r.kind === "transport" ? "Transport ajouté" : "Logement ajouté") : SAVED_LATER);
     setAdding(null);
   });
-  const remove = (kind: "transport" | "lodging", id: string, label: string) => {
-    if (!window.confirm(`Supprimer « ${label} » ?`)) return;
-    void guard(async () => { await notion.deleteReservation(kind, id); toast("Supprimé"); });
-  };
+  const remove = (kind: "transport" | "lodging", id: string, label: string) =>
+    void guard(async () => { await notion.deleteReservation(kind, id); toast(`« ${label} » supprimé`); });
   const editT = adding?.kind === "transport" && adding.editId ? transports.find((x) => x.id === adding.editId) : undefined;
   const editL = adding?.kind === "lodging" && adding.editId ? lodgings.find((x) => x.id === adding.editId) : undefined;
 
@@ -343,7 +345,7 @@ function RowActions({ onEdit, onDelete, disabled }: { onEdit: () => void; onDele
   return (
     <span className="row-actions">
       <button disabled={disabled} onClick={onEdit}>Modifier</button>
-      <button disabled={disabled} onClick={onDelete}>Supprimer</button>
+      <ConfirmButton className="" disabled={disabled} onConfirm={onDelete} confirmLabel="Confirmer ?">Supprimer</ConfirmButton>
     </span>
   );
 }

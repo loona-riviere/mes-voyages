@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MONTH_LETTERS, MONTH_SHORT, MONTHS, WANTS } from "../data/catalogue";
 import { AddFab } from "../components/AddFab";
+import { ConfirmButton } from "../components/ConfirmButton";
 import { Sheet } from "../components/Sheet";
 import { euros } from "../lib/format";
 import { PRIORITIES, WISH_STATUSES, type Kids, type Priority, type Trip, type Wish, type WishPatch } from "../shared/types";
@@ -278,8 +279,8 @@ export function WishForm({ state, onClose, notion, toast }: { state: WishFormSta
       footer={
         <div className="foot-row">
           {wish && (
-            <button className="btn ghost" disabled={busy || notion.state === "offline"}
-              onClick={() => window.confirm(`Supprimer « ${wish.name} » ?`) && void run(() => notion.deleteWish(wish.id), "Envie supprimée")}>Supprimer</button>
+            <ConfirmButton className="btn ghost" disabled={busy || notion.state === "offline"} confirmLabel="Confirmer ?"
+              onConfirm={() => void run(() => notion.deleteWish(wish.id), "Envie supprimée")}>Supprimer</ConfirmButton>
           )}
           <button className="btn primary" disabled={busy || !name.trim()}
             onClick={() => run(async () => wish ? notion.patchWish(wish.id, { ...fields, priority, ...(status ? { status } : {}) }) : notion.addWish({ ...fields, priority, ...(status ? { status } : {}) }), wish ? "Envie mise à jour" : "Envie ajoutée")}>
