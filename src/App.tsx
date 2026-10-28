@@ -11,6 +11,8 @@ import { Unlock } from "./screens/Unlock";
 import { NO_FILTER, WishForm, Wishes, WishesHeader, WishSheet, type WishFilter, type WishFormState } from "./screens/Wishes";
 import { applyProject, isActive, ProjectForm, ProjectSheet, ProjectsTab, type ProjectSheetState } from "./screens/Projects";
 
+const PROJECT_KEY = "mv-project-v1";
+
 const TITLES: Record<Tab, string> = { choose: "Où partir ?", wishes: "Envies", projects: "Projets", trips: "Voyages" };
 
 export function App() {
@@ -40,6 +42,28 @@ export function App() {
   const closeCrit = useCallback(() => setCritOpen(false), []);
   const closeWish = useCallback(() => setWishId(null), []);
   const liveProjects = useMemo(() => notion.projects.filter((p) => p.status !== "Archivé"), [notion.projects]);
+  // Projet choisi dans « Choisir » : il reste choisi même si on change ensuite un critère.
+  const [projectId, setProjectIdState] = useState<string>(() => {
+    try { return localStorage.getItem(PROJECT_KEY) ?? ""; } catch { return ""; }
+  });
+  const setProjectId = (id: string) => {
+    setProjectIdState(id);
+    try { localStorage.setItem(PROJECT_KEY, id); } catch { /* stockage indisponible */ }
+  };
+  const activeProject = liveProjects.find((p) => p.id === projectId) ?? (projectId ? undefined : liveProjects.find((p) => isActive(p, criteria)));
+  const projectModified = !!activeProject && !isActive(activeProject, criteria);
+  const saveToProject = async () => {
+    if (!activeProject) return;
+    try {
+      const sent = await notion.saveProject(
+        { months: [...criteria.months], days: criteria.days, budget: criteria.budget, wants: [...criteria.wants], rules: [...criteria.rules] },
+        activeProject.id,
+      );
+      toast(sent ? `« ${activeProject.name} » mis à jour` : "Enregistré ici, envoyé à Notion au retour du réseau");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Enregistrement impossible");
+    }
+  };
   const count = useMemo(() => rank(criteria, notion).results.length, [criteria, notion]);
 
   if (notion.state === "locked") return <Unlock onUnlock={notion.unlock} error={notion.error} />;
@@ -68,9 +92,12 @@ export function App() {
                 criteria={criteria}
                 openCriteria={() => setCritOpen(true)}
                 projects={liveProjects}
-                activeProject={liveProjects.find((p) => isActive(p, criteria))?.id ?? ""}
+                activeProject={activeProject?.id ?? ""}
+                modified={projectModified}
+                onSaveToProject={() => void saveToProject()}
                 onPickProject={(id) => {
                   if (id === "new") return setProjectSheet({ mode: "new" });
+                  setProjectId(id);
                   const p = liveProjects.find((x) => x.id === id);
                   if (p) { setCriteria(applyProject(p, criteria)); toast(p.name); }
                 }}
@@ -93,7 +120,7 @@ export function App() {
           {tab === "projects" && (
             <ProjectsTab
               notion={notion}
-              onApply={(p) => { setCriteria(applyProject(p, criteria)); go("choose"); toast(p.name); }}
+              onApply={(p) => { setProjectId(p.id); setCriteria(applyProject(p, criteria)); go("choose"); toast(p.name); }}
               onEdit={(p) => setProjectForm({ mode: "edit", id: p.id })}
               onNew={() => setProjectForm({ mode: "new" })}
             />
@@ -104,7 +131,8 @@ export function App() {
       <TabBar tab={tab} onChange={go} wishCount={notion.wishes.length} />
       <ProjectForm state={projectForm} onClose={() => setProjectForm(null)} notion={notion} toast={toast} onPlanned={() => go("trips")} />
       <ProjectSheet state={projectSheet} onClose={() => setProjectSheet(null)} criteria={criteria} notion={notion} toast={toast} />
-      <CriteriaSheet open={critOpen} onClose={closeCrit} criteria={criteria} setCriteria={setCriteria} count={count} />
+      <CriteriaSheet open={critOpen} onClose={closeCrit} criteria={criteria} setCriteria={setCriteria} count={count}
+        modifiedProject={projectModified ? activeProject?.name : undefined} onSaveToProject={() => void saveToProject()} />
       <WishSheet wish={notion.wishes.find((w) => w.id === wishId) ?? null} onClose={closeWish} notion={notion} toast={toast}
         onEdit={(id) => setWishForm({ mode: "edit", id })} onPlanned={() => go("trips")} />
       <WishForm state={wishForm} onClose={() => setWishForm(null)} notion={notion} toast={toast} />

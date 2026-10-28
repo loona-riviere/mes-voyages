@@ -220,6 +220,13 @@ function TripSheet({ form, onClose, notion, toast }: { form: Form; onClose: () =
         </>
       )}
       {offline && <p className="hint">Modifier un voyage nécessite le réseau. Les vols et logements, eux, peuvent s'ajouter hors ligne.</p>}
+      {trip && (
+        <button className="danger-btn" disabled={busy || offline} onClick={() => {
+          const n = notion.transports.filter((x) => x.tripId === trip.id).length + notion.lodgings.filter((x) => x.tripId === trip.id).length;
+          if (!window.confirm(`Supprimer « ${trip.name} »${n ? ` et ses ${n} réservation${n > 1 ? "s" : ""}` : ""} ? Il ira dans la corbeille Notion.`)) return;
+          void guard(async () => { await notion.deleteTrip(trip.id); toast("Voyage supprimé"); close(); });
+        }}>Supprimer ce voyage</button>
+      )}
     </>
   );
 

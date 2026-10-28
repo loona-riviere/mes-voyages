@@ -56,6 +56,7 @@ export const api = {
   deleteWish: async (id: string) => { await call("envies", { method: "DELETE", body: { id } }); },
   updateReservation: async (r: ReservationInput & { id: string }) => await call<{ transport?: Transport; lodging?: Lodging }>("reservations", { method: "PATCH", body: r }),
   deleteReservation: async (kind: "transport" | "lodging", id: string) => { await call("reservations", { method: "DELETE", body: { kind, id } }); },
+  deleteTrip: async (id: string) => { await call("voyages", { method: "DELETE", body: { id } }); },
   addTrip: async (t: TripInput) => (await call<{ trip: Trip }>("voyages", { method: "POST", body: t })).trip,
   patchTrip: async (id: string, t: TripInput) => (await call<{ trip: Trip }>("voyages", { method: "PATCH", body: { id, ...t } })).trip,
   projects: async () => (await call<{ projects: Project[] }>("projets")).projects,

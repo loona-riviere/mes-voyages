@@ -23,10 +23,13 @@ interface Props {
 
 const toggle = <T,>(list: readonly T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
-export function ChooseHeader({ criteria: c, openCriteria, projects, activeProject, onPickProject }: Pick<Props, "criteria"> & {
+export function ChooseHeader({ criteria: c, openCriteria, projects, activeProject, modified, onSaveToProject, onPickProject }: Pick<Props, "criteria"> & {
   openCriteria: () => void;
   projects: Project[];
   activeProject: string;
+  /** Les critères ont changé depuis l'application du projet */
+  modified: boolean;
+  onSaveToProject: () => void;
   /** "" = aucun projet, "new" = créer un projet */
   onPickProject: (id: string) => void;
 }) {
@@ -46,15 +49,26 @@ export function ChooseHeader({ criteria: c, openCriteria, projects, activeProjec
       </button>
       <select className="proj-pick" aria-label="Projet" value={activeProject} onChange={(e) => onPickProject(e.target.value)}>
         <option value="">Sans projet</option>
-        {projects.map((p) => <option key={p.id} value={p.id}>{p.status === "Choisi" ? "✓ " : ""}{p.name}</option>)}
+        {projects.map((p) => (
+          <option key={p.id} value={p.id}>{p.status === "Choisi" ? "✓ " : ""}{p.name}{modified && p.id === activeProject ? " · modifié" : ""}</option>
+        ))}
         <option value="new">+ Nouveau projet…</option>
       </select>
+      {modified && (
+        <div className="proj-modified">
+          <span>Critères changés depuis le projet</span>
+          <button className="text-btn" onClick={onSaveToProject}>Enregistrer dans le projet</button>
+        </div>
+      )}
     </div>
   );
 }
 
-export function CriteriaSheet({ open, onClose, criteria: c, setCriteria, count }: {
+export function CriteriaSheet({ open, onClose, criteria: c, setCriteria, count, modifiedProject, onSaveToProject }: {
   open: boolean; onClose: () => void; criteria: Criteria; setCriteria: (c: Criteria) => void; count: number;
+  /** Nom du projet choisi quand les critères en diffèrent */
+  modifiedProject?: string;
+  onSaveToProject: () => void;
 }) {
   const set = (patch: Partial<Criteria>) => setCriteria({ ...c, ...patch });
   return (
@@ -62,7 +76,12 @@ export function CriteriaSheet({ open, onClose, criteria: c, setCriteria, count }
       open={open}
       title="Critères"
       onClose={onClose}
-      footer={<button className="btn primary" onClick={onClose}>Voir les {count} destinations</button>}
+      footer={modifiedProject ? (
+        <div className="foot-row">
+          <button className="btn ghost" onClick={() => { onSaveToProject(); onClose(); }}>Enregistrer dans « {modifiedProject} »</button>
+          <button className="btn primary" onClick={onClose}>Voir les {count}</button>
+        </div>
+      ) : <button className="btn primary" onClick={onClose}>Voir les {count} destinations</button>}
     >
       <section>
         <div className="lbl">Mois du départ <b>{c.months.length > 1 ? `${c.months.length} mois` : MONTHS[c.months[0]]}</b></div>

@@ -38,6 +38,14 @@ export default async (req: Request) => {
         const page = await notion<Page>(`/pages/${id}`, { method: "PATCH", body: { properties: tripProperties(patch, false) } });
         return json({ trip: toTrip(page) });
       }
+      case "DELETE": {
+        const { id } = await body<{ id?: string }>(req);
+        if (!id || !PAGE_ID.test(id)) throw new InvalidInput("Identifiant invalide");
+        const current = await notion<Page & { parent?: { data_source_id?: string } }>(`/pages/${id}`);
+        if (!sameId(current.parent?.data_source_id, TRIPS_DATA_SOURCE)) throw new InvalidInput("Cette page n'est pas un voyage");
+        await notion<Page>(`/pages/${id}`, { method: "PATCH", body: { in_trash: true } });
+        return json({ ok: true });
+      }
       default:
         return json({ error: "Méthode non permise" }, 405);
     }

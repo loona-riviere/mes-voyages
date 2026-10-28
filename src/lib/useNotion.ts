@@ -31,6 +31,8 @@ export interface NotionData {
   /** Création et modification d'un voyage : réseau nécessaire. */
   saveTrip: (t: TripInput, id?: string) => Promise<Trip>;
   deleteWish: (id: string) => Promise<void>;
+  /** Supprime le voyage et ses vols et logements (corbeille Notion) : réseau nécessaire. */
+  deleteTrip: (id: string) => Promise<void>;
   /** Modifier ou supprimer une réservation déjà dans Notion : réseau nécessaire. */
   updateReservation: (r: ReservationInput, id: string) => Promise<void>;
   deleteReservation: (kind: "transport" | "lodging", id: string) => Promise<void>;
@@ -302,6 +304,17 @@ export function useNotion(): NotionData {
     return saved;
   }, []);
 
+  const deleteTrip = useCallback(async (id: string) => {
+    // Les réservations d'abord : sinon elles resteraient dans Notion sans voyage.
+    for (const t of transports.filter((x) => x.tripId === id && !isLocalId(x.id))) await api.deleteReservation("transport", t.id);
+    for (const l of lodgings.filter((x) => x.tripId === id && !isLocalId(x.id))) await api.deleteReservation("lodging", l.id);
+    await api.deleteTrip(id);
+    setTransports((prev) => prev.filter((x) => x.tripId !== id));
+    setLodgings((prev) => prev.filter((x) => x.tripId !== id));
+    setTrips((prev) => prev.filter((t) => t.id !== id));
+    setQueue(queue.current.filter((p) => !(p.kind === "reservation" && p.input.tripId === id)));
+  }, [transports, lodgings]);
+
   const deleteWish = useCallback(async (id: string) => {
     if (!isLocalId(id)) await api.deleteWish(id);
     setWishes((prev) => prev.filter((w) => w.id !== id));
@@ -338,6 +351,6 @@ export function useNotion(): NotionData {
 
   return {
     wishes, trips, catalogue, projects, transports, lodgings, state, error, updatedAt, pending,
-    refresh, unlock, addWish, patchWish, saveProject, addReservation, saveTrip, deleteWish, updateReservation, deleteReservation,
+    refresh, unlock, addWish, patchWish, saveProject, addReservation, saveTrip, deleteWish, deleteTrip, updateReservation, deleteReservation,
   };
 }
