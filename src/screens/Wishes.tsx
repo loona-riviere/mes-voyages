@@ -118,6 +118,15 @@ export function WishSheet({ wish, onClose, notion, toast, onEdit, onPlanned }: {
   const [last, setLast] = useState<Wish | null>(wish);
   if (wish && wish !== last) setLast(wish);
   const w = wish ?? last;
+  const [notes, setNotes] = useState(w?.notes ?? "");
+  const [notesOf, setNotesOf] = useState(w?.id);
+  if (w && w.id !== notesOf) { setNotesOf(w.id); setNotes(w.notes); }
+  const saveNotes = () => {
+    if (w && notes.trim() !== w.notes.trim()) void save({ notes: notes.trim() });
+  };
+
+  // Fermer la fiche enregistre aussi les notes en cours (le champ ne perd pas toujours le focus avant).
+  const closeSheet = () => { saveNotes(); onClose(); };
 
   const save = async (patch: WishPatch) => {
     if (!w) return;
@@ -146,10 +155,10 @@ export function WishSheet({ wish, onClose, notion, toast, onEdit, onPlanned }: {
     <Sheet
       open={!!wish}
       title={w?.name ?? ""}
-      onClose={onClose}
+      onClose={closeSheet}
       footer={w && (
         <div className="foot-row">
-          <button className="btn ghost" onClick={() => { onClose(); onEdit(w.id); }}>Modifier</button>
+          <button className="btn ghost" onClick={() => { closeSheet(); onEdit(w.id); }}>Modifier</button>
           <button className="btn primary" disabled={notion.state === "offline"} onClick={plan}>Planifier un voyage</button>
         </div>
       )}
@@ -169,8 +178,13 @@ export function WishSheet({ wish, onClose, notion, toast, onEdit, onPlanned }: {
             <dt>Durée idéale</dt><dd>{w.idealDays ? `${w.idealDays} jours` : "—"}</dd>
             <dt>Budget / pers.</dt><dd>{w.budget ? euros(w.budget) : "—"}</dd>
             <dt>Enfants</dt><dd>{w.kids ?? "—"}</dd>
-            {w.notes && <><dt>Notes</dt><dd className="notes">{w.notes}</dd></>}
           </dl>
+          <section>
+            <label className="lbl" htmlFor="wishNotes">Notes</label>
+            <textarea id="wishNotes" className="field textarea notes-area" value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={saveNotes}
+              placeholder="Conseils d'amis, villes à voir, adresses, idées d'itinéraire…" />
+            <p className="hint">Enregistré tout seul quand tu quittes le champ, même hors ligne.</p>
+          </section>
           {w.url && <a className="link" href={w.url} target="_blank" rel="noopener">Ouvrir dans Notion ↗</a>}
         </>
       )}

@@ -394,3 +394,4 @@ section.two { display: grid; }
 .crit-sum i { font: 600 13px var(--body); font-style: normal; color: var(--accent-ink); flex: none; }
 .proj-pick { width: 100%; font: 600 14px var(--body); padding: 9px 12px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--muted); }
 .tabbar { padding-bottom: calc(2px + env(safe-area-inset-bottom, 0px) * .6); }
+.notes-area { min-height: 140px; }

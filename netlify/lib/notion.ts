@@ -249,7 +249,11 @@ export function toTrip(p: Page): Trip {
 
 // ---------- Écriture ----------
 
-const rich = (s: string) => [{ type: "text", text: { content: s.slice(0, 2000) } }];
+/** Notion limite chaque morceau de texte à 2000 caractères (100 morceaux au plus) : les longues notes sont découpées. */
+const rich = (s: string) => {
+  const parts = s.slice(0, 2000 * 100).match(/[\s\S]{1,2000}/g) ?? [""];
+  return parts.map((content) => ({ type: "text", text: { content } }));
+};
 const sel = (name: string | null | undefined) => ({ select: name ? { name } : null });
 
 export class InvalidInput extends Error {}
